@@ -1,7 +1,7 @@
 # base dir for data upload conf eg, data_base_dir={FATE}
 # also used for accessing local files when running standalone mode
 # examples/data/breast_hetero_guest.csv -> $data_base_dir/examples/data/breast_hetero_guest.csv
-data_base_dir: /Users/yuwu/PycharmProjects/FATE
+data_base_dir: path(FATE)
 
 # directory dedicated to fate_test job file storage, default cache location={FATE}/examples/cache/
 cache_directory: examples/cache/
@@ -18,14 +18,12 @@ min_test_data_config: examples/data/upload_config/min_test_data_testsuite.json
 all_examples_data_config: examples/data/upload_config/all_examples_data_testsuite.json
 
 # directory where FATE code locates, default installation location={FATE}/fate
-# python/federatedml -> $fate_base/python/federatedml
-fate_base: /Users/yuwu/PycharmProjects/FATE/fate
+# python/ml -> $fate_base/python/ml
+fate_base: path(FATE)/fate
 
 # whether to delete data in suites after all jobs done
 clean_data: true
 
-# work mode: 0 for standalone, 1 for cluster
-work_mode: 0
 
 # participating parties' id and corresponding flow service ip & port information
 parties:
