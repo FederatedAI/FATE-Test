@@ -1,7 +1,6 @@
 colorama>0.4.4
 prettytable<2.0.0,>=1.0.0
 loguru>=0.6.0
-poetry>=0.12
 pandas==2.0.3
 ruamel-yaml==0.16
 click>=8.0.0
