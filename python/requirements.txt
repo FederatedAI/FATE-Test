@@ -5,3 +5,4 @@ pandas==2.0.3
 ruamel-yaml==0.16
 click>=8.0.0
 xgboost==1.7.6
+scikit-learn
