@@ -12,7 +12,8 @@ install_requires = [
     "prettytable>=1.0.0,<2.0.0",
     "ruamel.yaml>=0.16,<0.17.0",
     'colorama>0.4.4',
-    'xgboost>=1.7.6'
+    'xgboost>=1.7.6',
+    "scikit-learn"
 ]
 
 entry_points = {"console_scripts": ["fate_test = fate_test.scripts.cli:cli"]}
