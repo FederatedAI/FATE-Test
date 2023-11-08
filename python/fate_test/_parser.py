@@ -162,8 +162,8 @@ class Testsuite(object):
         colored_txt = txt.replace("success", f"{TxtStyle.TRUE_VAL}success{TxtStyle.END}")
         colored_txt = colored_txt.replace("failed", f"{TxtStyle.FALSE_VAL}failed{TxtStyle.END}")
         colored_txt = colored_txt.replace("not submitted", f"{TxtStyle.FALSE_VAL}not submitted{TxtStyle.END}")
-        # only color decimal values
-        pattern = r'\b\d+\.\d+\b|\b\.\d+\b'
+        # only color decimal values ends with s
+        pattern = r'\b\d+\.\d+s\b'
         colored_txt = re.sub(pattern, f"{TxtStyle.DATA_FIELD_VAL}\\g<0>{TxtStyle.END}", colored_txt)
         # color 'fit' and 'predict'
         pattern = r'\b(predict|fit)\b'
@@ -194,14 +194,22 @@ class Testsuite(object):
             else:
                 exception_id_txt = f"{TxtStyle.FIELD_VAL}{status.exception_id}{TxtStyle.END}"
             if status.job_id != '-':
-                job_id_event = [(i, j) for i, j in zip(status.job_id, status.event)]
+                job_id_event = ",\n".join([f"{i}: {j}" for i, j in zip(status.job_id, status.event)])
+                if isinstance(status.status, list):
+                    status_txt = ",\n".join([str(s.status) for s in status.status])
+                    time_elapsed_txt = ",\n".join([f"{t}s" for t in status.time_elapsed])
+                else:
+                    status_txt = str(status.status)
+                    time_elapsed_txt = f"{status.time_elapsed}"
             else:
                 job_id_event = '-'
+                status_txt = str(status.status)
+                time_elapsed_txt = "-"
             table.add_row([
                 f"{TxtStyle.FIELD_VAL}{status.name}{TxtStyle.END}",
-                self.style_table(str(job_id_event)),
-                self.style_table(str(status.status)),
-                self.style_table(str(status.time_elapsed)) if status.job_id != '-' else '-',
+                self.style_table(job_id_event),
+                self.style_table(status_txt),
+                self.style_table(time_elapsed_txt),
                 f"{TxtStyle.FIELD_VAL}{exception_id_txt}{TxtStyle.END}"
                 # f"{TxtStyle.FIELD_VAL}{','.join(status.rest_dependency)}{TxtStyle.END}",
             ]
