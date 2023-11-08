@@ -140,6 +140,9 @@ class Parties(object):
     def party_to_role_string(self, party):
         return self._party_to_role_string[party]
 
+    def role_to_party(self, role):
+        return self._role_to_parties[role]
+
     def extract_role(self, counts: typing.MutableMapping[str, int]):
         roles = {}
         for role, num in counts.items():

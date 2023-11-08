@@ -21,6 +21,9 @@ from datetime import timedelta
 from inspect import signature
 
 import click
+from prettytable import PrettyTable, ORGMODE
+from ruamel import yaml
+
 from fate_test._client import Clients
 from fate_test._config import Config
 from fate_test._io import LOGGER, echo
@@ -28,8 +31,6 @@ from fate_test._parser import PerformanceSuite
 from fate_test.scripts._options import SharedOptions
 from fate_test.scripts._utils import _load_testsuites, _upload_data, _delete_data, _load_module_from_script
 from fate_test.utils import TxtStyle, parse_job_time_info, pretty_time_info_summary
-from prettytable import PrettyTable, ORGMODE
-from ruamel import yaml
 
 
 @click.command("performance")
@@ -196,9 +197,9 @@ def _run_performance_jobs(config: Config, suite: PerformanceSuite, namespace: st
             else:
                 job_id = mod.main()
             echo.echo(f"[{j + 1}/{job_n}] job: {job.job_name} Success!\n")
-            ret_msg = client["guest_0"].query_job(job_id=job_id,
-                                                  role="guest",
-                                                  party_id=config.parties.guest[0]).get("data")
+            ret_msg = client["guest_0"].query_task(job_id=job_id,
+                                                   role="guest",
+                                                   party_id=config.parties.guest[0]).get("data")
             time_summary = parse_job_time_info(ret_msg)
             job_time_history[job_name] = {"job_id": job_id, "time_summary": time_summary}
             echo.echo(f"[{j + 1}/{job_n}] job: {job.job_name} time info: {time_summary}\n")

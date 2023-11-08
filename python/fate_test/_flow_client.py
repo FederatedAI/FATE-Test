@@ -20,10 +20,9 @@ import typing
 from datetime import timedelta
 from pathlib import Path
 
+from fate_client.flow_sdk import FlowClient
 from fate_test import _config
 from fate_test._parser import Data
-
-from fate_client.flow_sdk import FlowClient
 
 
 class FLOWClient(object):
@@ -161,9 +160,13 @@ class FLOWClient(object):
         response = self._client.table.delete(namespace=namespace, table_name=table_name)
         return response
 
-    def query_job(self, job_id, role, party_id):
+    def query_task(self, job_id, role, party_id):
         response = self._client.task.query(job_id, role=role, party_id=party_id)
         return response
+
+    def query_job(self, job_id, role, party_id):
+        response = self._client.job.query(job_id, role=role, party_id=party_id)
+        return QueryJobResponse(response)
 
     def _query_job(self, job_id, role, party_id):
         response = self._client.job.query(job_id, role, party_id)
@@ -220,10 +223,12 @@ class QueryJobResponse(object):
         try:
             status = Status(response.get('data')[0]["status"])
             progress = response.get('data')[0]['progress']
+            elapsed = response.get('data')[0]['elapsed'] / 1000
         except Exception as e:
             raise RuntimeError(f"query job error, response: {json.dumps(response, indent=4)}") from e
         self.status = status
         self.progress = progress
+        self.elapsed = elapsed
 
 
 class UploadDataResponse(object):
@@ -244,17 +249,6 @@ class AddNotesResponse(object):
                 raise RuntimeError(f"add notes error: {response}")
         except Exception as e:
             raise RuntimeError(f"add notes error: {response}") from e
-
-
-"""class SubmitJobResponse(object):
-    def __init__(self, response: dict):
-        try:
-            self.job_id = response["jobId"]
-            self.model_info = response["data"]["model_info"]
-        except Exception as e:
-            raise RuntimeError(f"submit job error, response: {response}") from e
-        self.status: typing.Optional[Status] = None
-"""
 
 
 class DataProgress(object):
