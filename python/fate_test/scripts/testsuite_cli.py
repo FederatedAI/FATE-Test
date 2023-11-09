@@ -149,10 +149,10 @@ def _run_pipeline_jobs(config: Config, suite: Testsuite, namespace: str, data_na
     for i, pipeline_job in enumerate(suite.pipeline_jobs):
         echo.echo(f"Running [{i + 1}/{job_n}] job: {pipeline_job.job_name}")
 
-        def _raise(err_msg, status="failed", job_id=None, event=None):
+        def _raise(err_msg, status="failed", job_id=None, event=None, time_elapsed=None):
             exception_id = str(uuid.uuid1())
             suite.update_status(job_name=job_name, job_id=job_id, exception_id=exception_id, status=status,
-                                event=event)
+                                event=event, time_elapsed=time_elapsed)
             echo.file(f"exception({exception_id}), error message:\n{err_msg}")
 
         job_name, script_path = pipeline_job.job_name, pipeline_job.script_path
@@ -186,7 +186,7 @@ def _run_pipeline_jobs(config: Config, suite: Testsuite, namespace: str, data_na
                 except Exception as e:
                     job_info = os.environ.get("pipeline_job_info")
                     job_id, status, time_elapsed, event = extract_job_status(job_info, client, guest_party_id)
-                    _raise(e, job_id=job_id, status=status, event=event)
+                    _raise(e, job_id=job_id, status=status, event=event, time_elapsed=time_elapsed)
                     os.environ.pop("pipeline_job_info")
                     continue
         except Exception as e:
