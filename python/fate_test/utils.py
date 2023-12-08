@@ -14,15 +14,17 @@
 #  limitations under the License.
 #
 
+import json
 import math
 import os
 from datetime import timedelta
 
 import numpy as np
 from colorama import init, deinit, Fore, Style
-from fate_test._io import echo
 from prettytable import PrettyTable, ORGMODE
 from ruamel import yaml
+
+from fate_test._io import echo
 
 SCRIPT_METRICS = "script_metrics"
 DISTRIBUTION_METRICS = "distribution_metrics"
@@ -402,3 +404,19 @@ def pretty_time_info_summary(time_info_summary, job_name):
 
     return table.get_string(title=f"{TxtStyle.TITLE}Component Time Summary: "
                                   f"{job_name}({time_info_summary['job_id']}){TxtStyle.END}")
+
+
+def extract_job_status(job_info_list, client, party_id):
+    job_id_list = []
+    job_status_list = []
+    job_time_list = []
+    event_list = []
+    job_info_list = json.loads(job_info_list)
+    for job_info in job_info_list:
+        job_id = job_info.get("job_info").get("job_id")
+        job_id_list.append(job_id)
+        event_list.append(job_info.get("event"))
+        job_summary = client.query_job(job_id, "guest", party_id)
+        job_status_list.append(job_summary.status)
+        job_time_list.append(job_summary.elapsed)
+    return job_id_list, job_status_list, job_time_list, event_list

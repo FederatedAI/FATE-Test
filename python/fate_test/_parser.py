@@ -14,16 +14,18 @@
 #  limitations under the License.
 #
 
+import re
 import typing
 from pathlib import Path
 
 import prettytable
+# import json
+from ruamel import yaml
+
 from fate_test import _config
 from fate_test._config import Config
 from fate_test._io import echo
 from fate_test.utils import TxtStyle
-# import json
-from ruamel import yaml
 
 
 # noinspection PyPep8Naming
@@ -112,7 +114,7 @@ class Testsuite(object):
         self.pipeline_jobs = pipeline_jobs
         self.path = path
         self.suite_name = Path(self.path).stem
-        self._final_status: typing.MutableMapping[str, FinalStatus] = {}
+        self._final_status = {}
         """
         self._dependency: typing.MutableMapping[str, typing.List[Job]] = {}
         self._ready_jobs = deque()
@@ -160,6 +162,12 @@ class Testsuite(object):
         colored_txt = txt.replace("success", f"{TxtStyle.TRUE_VAL}success{TxtStyle.END}")
         colored_txt = colored_txt.replace("failed", f"{TxtStyle.FALSE_VAL}failed{TxtStyle.END}")
         colored_txt = colored_txt.replace("not submitted", f"{TxtStyle.FALSE_VAL}not submitted{TxtStyle.END}")
+        # only color decimal values ends with s
+        pattern = r'\b\d+\.\d+s\b'
+        colored_txt = re.sub(pattern, f"{TxtStyle.DATA_FIELD_VAL}\\g<0>{TxtStyle.END}", colored_txt)
+        # color 'fit' and 'predict'
+        pattern = r'\b(predict|fit)\b'
+        colored_txt = re.sub(pattern, f"{TxtStyle.FIELD_VAL}\\g<0>{TxtStyle.END}", colored_txt)
         return colored_txt
 
     def pretty_final_summary(self, time_consuming, suite_file=None):
@@ -168,75 +176,55 @@ class Testsuite(object):
         )"""
         table = prettytable.PrettyTable()
         table.set_style(prettytable.ORGMODE)
-        field_names = ["job_name", "job_id", "status", "time_consuming", "exception_id", "rest_dependency"]
+        # field_names = ["job_name", "job_id", "status", "time_consuming", "exception_id", "rest_dependency"]
+        field_names = ["job_name", "job_id", "status", "time_consuming", "exception_id"]
         table.field_names = field_names
+
         for status in self.get_final_status().values():
-            if status.status != "success":
+            if isinstance(status.status, str) and status.status != "success":
                 status.suite_file = suite_file
                 _config.non_success_jobs.append(status)
+            if isinstance(status.status, list):
+                for job_status in status.status:
+                    if job_status.status != "success":
+                        status.suite_file = suite_file
+                        _config.non_success_jobs.append(status)
             if status.exception_id != "-":
                 exception_id_txt = f"{TxtStyle.FALSE_VAL}{status.exception_id}{TxtStyle.END}"
             else:
                 exception_id_txt = f"{TxtStyle.FIELD_VAL}{status.exception_id}{TxtStyle.END}"
-            table.add_row(
-                [
-                    f"{TxtStyle.FIELD_VAL}{status.name}{TxtStyle.END}",
-                    f"{TxtStyle.FIELD_VAL}{status.job_id}{TxtStyle.END}",
-                    self.style_table(status.status),
-                    f"{TxtStyle.FIELD_VAL}{time_consuming.pop(0) if status.job_id != '-' else '-'}{TxtStyle.END}",
-                    f"{exception_id_txt}",
-                    f"{TxtStyle.FIELD_VAL}{','.join(status.rest_dependency)}{TxtStyle.END}",
-                ]
+            if status.job_id != '-':
+                job_id_event = ",\n".join([f"{i}: {j}" for i, j in zip(status.job_id, status.event)])
+                if isinstance(status.status, list):
+                    status_txt = ",\n".join([str(s.status) for s in status.status])
+                    time_elapsed_txt = ",\n".join([f"{t}s" for t in status.time_elapsed])
+                else:
+                    status_txt = str(status.status)
+                    time_elapsed_txt = f"{status.time_elapsed}"
+            else:
+                job_id_event = '-'
+                status_txt = str(status.status)
+                time_elapsed_txt = "-"
+            table.add_row([
+                f"{TxtStyle.FIELD_VAL}{status.name}{TxtStyle.END}",
+                self.style_table(job_id_event),
+                self.style_table(status_txt),
+                self.style_table(time_elapsed_txt),
+                f"{TxtStyle.FIELD_VAL}{exception_id_txt}{TxtStyle.END}"
+                # f"{TxtStyle.FIELD_VAL}{','.join(status.rest_dependency)}{TxtStyle.END}",
+            ]
             )
 
         return table.get_string(title=f"{TxtStyle.TITLE}Testsuite Summary: {self.suite_name}{TxtStyle.END}")
 
-    """def model_in_dep(self, name):
-        return name in self._dependency
-
-    def get_dependent_jobs(self, name):
-        return self._dependency[name]
-
-    def remove_dependency(self, name):
-        del self._dependency[name]
-
-    def feed_dep_info(self, job, name, model_info=None, table_info=None, cache_info=None, model_loader_info=None):
-        if model_info is not None:
-            job.set_pre_work(name, **model_info)
-        if table_info is not None:
-            job.set_input_data(table_info["hierarchy"], table_info["table_info"])
-        if cache_info is not None:
-            job.set_input_data(cache_info["hierarchy"], cache_info["cache_info"])
-        if model_loader_info is not None:
-            job.set_input_data(model_loader_info["hierarchy"], model_loader_info["model_loader_info"])
-        if name in job.pre_works:
-            job.pre_works.remove(name)
-        if job.is_submit_ready():
-            self._ready_jobs.appendleft(job)
-
-    def reflash_configs(self, config: Config):
-        failed = []
-        for job in self.jobs:
-            try:
-                job.job_conf.update(
-                    config.parties, None, {}, {}
-                )
-            except ValueError as e:
-                failed.append((job, e))
-        return failed
-    """
-
     def update_status(
-            self, job_name, job_id: str = None, status: str = None, exception_id: str = None
+            self, job_name, job_id=None, status=None, exception_id=None, time_elapsed=None, event=None
     ):
         for k, v in locals().items():
             if k != "job_name" and v is not None:
                 setattr(self._final_status[job_name], k, v)
 
     def get_final_status(self):
-        """for name, jobs in self._dependency.items():
-            for job in jobs:
-                self._final_status[job.job_name].rest_dependency.append(name)"""
         return self._final_status
 
 
@@ -244,17 +232,19 @@ class FinalStatus(object):
     def __init__(
             self,
             name: str,
-            job_id: str = "-",
-            status: str = "not submitted",
-            exception_id: str = "-",
-            rest_dependency: typing.List[str] = None,
+            job_id="-",
+            status="not submitted",
+            exception_id="-",
+            time_elapsed=None,
+            event="-"
     ):
         self.name = name
         self.job_id = job_id
         self.status = status
         self.exception_id = exception_id
-        self.rest_dependency = rest_dependency or []
         self.suite_file = None
+        self.time_elapsed = time_elapsed
+        self.event = event
 
 
 class BenchmarkJob(object):
@@ -358,21 +348,43 @@ class PerformanceSuite(object):
 def non_success_summary():
     status = {}
     for job in _config.non_success_jobs:
-        if job.status not in status.keys():
+        if isinstance(job.status, str) and job.status not in status.keys():
             status[job.status] = prettytable.PrettyTable(
-                ["testsuite_name", "job_name", "job_id", "status", "exception_id", "rest_dependency"]
+                # ["testsuite_name", "job_name", "job_id", "status", "exception_id", "rest_dependency"]
+                ["testsuite_name", "job_name", "job_id", "status", "exception_id"]
             )
+        elif isinstance(job.status, list):
+            for job_status in job.status:
+                if job_status not in status.keys():
+                    status[job_status] = prettytable.PrettyTable(
+                        # ["testsuite_name", "job_name", "job_id", "status", "exception_id", "rest_dependency"]
+                        ["testsuite_name", "job_name", "job_id", "status", "exception_id"]
+                    )
+        if isinstance(job.status, str):
+            status[job.status].add_row(
+                [
+                    job.suite_file,
+                    job.name,
+                    job.job_id,
+                    job.status,
+                    job.exception_id
+                    # ",".join(job.rest_dependency),
 
-        status[job.status].add_row(
-            [
-                job.suite_file,
-                job.name,
-                job.job_id,
-                job.status,
-                job.exception_id,
-                ",".join(job.rest_dependency),
-            ]
-        )
+                ]
+            )
+        else:
+            for i, job_status in enumerate(job.status):
+                status[job_status].add_row(
+                    [
+                        job.suite_file,
+                        job.name,
+                        job.job_id[i],
+                        job_status,
+                        job.exception_id
+                        # ",".join(job.rest_dependency),
+
+                    ]
+                )
     for k, v in status.items():
         echo.echo("\n" + "#" * 60)
         echo.echo(v.get_string(title=f"{k} job record"), fg='red')

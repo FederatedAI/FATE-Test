@@ -13,11 +13,14 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 #
+
+import os
 import time
 import uuid
 from datetime import timedelta
 
 import click
+
 from fate_test import _config
 from fate_test._client import Clients
 from fate_test._config import Config
@@ -25,6 +28,7 @@ from fate_test._io import LOGGER, echo
 from fate_test._parser import Testsuite, non_success_summary
 from fate_test.scripts._options import SharedOptions
 from fate_test.scripts._utils import _load_testsuites, _upload_data, _delete_data, _load_module_from_script
+from fate_test.utils import extract_job_status
 
 """
 @click.option('-uj', '--update-job-parameters', default="{}", type=JSON_STRING,
@@ -111,8 +115,9 @@ def run_suite(ctx, include, exclude, glob,
                 continue
 
             if not skip_jobs:
+                os.environ['enable_pipeline_job_info_callback'] = '1'
                 try:
-                    time_consuming = _run_pipeline_jobs(config_inst, suite, namespace, data_namespace_mangling)
+                    time_consuming = _run_pipeline_jobs(config_inst, suite, namespace, data_namespace_mangling, client)
                 except Exception as e:
                     raise RuntimeError(f"exception occur while running pipeline jobs for {suite.path}") from e
 
@@ -134,16 +139,20 @@ def run_suite(ctx, include, exclude, glob,
     echo.echo(f"testsuite namespace: {namespace}", fg='red')
 
 
-def _run_pipeline_jobs(config: Config, suite: Testsuite, namespace: str, data_namespace_mangling: bool):
+def _run_pipeline_jobs(config: Config, suite: Testsuite, namespace: str, data_namespace_mangling: bool,
+                       clients: Clients):
     # pipeline demo goes here
+    client = clients['guest_0']
+    guest_party_id = config.parties.role_to_party("guest")[0]
     job_n = len(suite.pipeline_jobs)
     time_list = []
     for i, pipeline_job in enumerate(suite.pipeline_jobs):
         echo.echo(f"Running [{i + 1}/{job_n}] job: {pipeline_job.job_name}")
 
-        def _raise(err_msg, status="failed"):
+        def _raise(err_msg, status="failed", job_id=None, event=None, time_elapsed=None):
             exception_id = str(uuid.uuid1())
-            suite.update_status(job_name=job_name, exception_id=exception_id, status=status)
+            suite.update_status(job_name=job_name, job_id=job_id, exception_id=exception_id, status=status,
+                                event=event, time_elapsed=time_elapsed)
             echo.file(f"exception({exception_id}), error message:\n{err_msg}")
 
         job_name, script_path = pipeline_job.job_name, pipeline_job.script_path
@@ -153,8 +162,12 @@ def _run_pipeline_jobs(config: Config, suite: Testsuite, namespace: str, data_na
             if data_namespace_mangling:
                 try:
                     mod.main(config=config, namespace=f"_{namespace}")
-                    suite.update_status(job_name=job_name, status="success")
+                    job_info = os.environ.get("pipeline_job_info")
+                    job_id, status, time_elapsed, event = extract_job_status(job_info, client, guest_party_id)
+                    suite.update_status(job_name=job_name, job_id=job_id, status=status, time_elapsed=time_elapsed,
+                                        event=event)
                     time_list.append(time.time() - start)
+                    os.environ.pop("pipeline_job_info")
 
                 except Exception as e:
                     _raise(e)
@@ -162,10 +175,19 @@ def _run_pipeline_jobs(config: Config, suite: Testsuite, namespace: str, data_na
             else:
                 try:
                     mod.main(config=config)
-                    suite.update_status(job_name=job_name, status="success")
+                    job_info = os.environ.get("pipeline_job_info")
+                    job_id, status, time_elapsed, event = extract_job_status(job_info, client, guest_party_id)
+                    suite.update_status(job_name=job_name, job_id=job_id, status=status, time_elapsed=time_elapsed,
+                                        event=event)
+                    # suite.update_status(job_name=job_name, status="success")
                     time_list.append(time.time() - start)
+                    os.environ.pop("pipeline_job_info")
+
                 except Exception as e:
-                    _raise(e)
+                    job_info = os.environ.get("pipeline_job_info")
+                    job_id, status, time_elapsed, event = extract_job_status(job_info, client, guest_party_id)
+                    _raise(e, job_id=job_id, status=status, event=event, time_elapsed=time_elapsed)
+                    os.environ.pop("pipeline_job_info")
                     continue
         except Exception as e:
             _raise(e, status="not submitted")
