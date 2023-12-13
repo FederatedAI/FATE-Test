@@ -6,6 +6,7 @@ import uuid
 from pathlib import Path
 
 import click
+
 from fate_test._client import Clients
 from fate_test._config import Config
 from fate_test._flow_client import DataProgress, UploadDataResponse, QueryJobResponse
@@ -121,9 +122,9 @@ def _upload_data(clients: Clients, suite, config: Config, output_path=None):
                 echo.stdout_newline()
                 # role, idx = data.role_str.lower().split("_")
                 # party_id = config.role[role][int(idx)]
-                status = clients[data.role_str].transform_local_file_to_dataframe(data,
-                                                                                  _call_back,
-                                                                                  output_path)
+                status = clients[data.role_str].upload_file_and_convert_to_dataframe(data,
+                                                                                     _call_back,
+                                                                                     output_path)
                 time.sleep(1)
                 data_progress.update()
                 if status != 'success':
