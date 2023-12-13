@@ -21,6 +21,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from fate_client.flow_sdk import FlowClient
+
 from fate_test import _config
 from fate_test._parser import Data
 
@@ -42,11 +43,47 @@ class FLOWClient(object):
         self.address = address
 
     def transform_local_file_to_dataframe(self, data: Data, callback=None, output_path=None):
-        data_warehouse = self.upload_data(data, callback, output_path)
-        status = self.transform_to_dataframe(data.namespace, data.table_name, data_warehouse, callback)
+        #data_warehouse = self.upload_data(data, callback, output_path)
+        #status = self.transform_to_dataframe(data.namespace, data.table_name, data_warehouse, callback)
+        status = self.upload_file_and_convert_to_dataframe(data, callback, output_path)
         return status
 
-    def upload_data(self, data: Data, callback=None, output_path=None):
+    def upload_file_and_convert_to_dataframe(self, data: Data, callback=None, output_path=None):
+        conf = data.config
+        # if conf.get("engine", {}) != "PATH":
+        if output_path is not None:
+            conf['file'] = os.path.join(os.path.abspath(output_path), os.path.basename(conf.get('file')))
+        else:
+            if _config.data_switch is not None:
+                conf['file'] = os.path.join(str(self._cache_directory), os.path.basename(conf.get('file')))
+            else:
+                conf['file'] = os.path.join(str(self._data_base_dir), conf.get('file'))
+        path = Path(conf.get('file'))
+        if not path.exists():
+            raise Exception('The file is obtained from the fate flow client machine, but it does not exist, '
+                            f'please check the path: {path}')
+        response = self._client.data.upload_file(file=str(path),
+                                                 head=data.head,
+                                                 meta=data.meta,
+                                                 extend_sid=data.extend_sid,
+                                                 partitions=data.partitions,
+                                                 namespace=data.namespace,
+                                                 name=data.table_name)
+        try:
+            if callback is not None:
+                callback(response)
+                status = self._awaiting(response["job_id"], "local", 0)
+                status = str(status).lower()
+            else:
+                status = response["retmsg"]
+
+        except Exception as e:
+            raise RuntimeError(f"upload data failed") from e
+        job_id = response["job_id"]
+        self._awaiting(job_id, "local", 0)
+        return status
+
+    """def upload_data(self, data: Data, callback=None, output_path=None):
         response, file_path = self._upload_data(data, output_path=output_path)
         try:
             if callback is not None:
@@ -82,7 +119,7 @@ class FLOWClient(object):
             raise RuntimeError(f"upload data failed") from e
         job_id = response["job_id"]
         self._awaiting(job_id, "local", 0)
-        return status
+        return status"""
 
     def delete_data(self, data: Data):
         try:
@@ -118,7 +155,7 @@ class FLOWClient(object):
                 callback(response)
             time.sleep(1)
 
-    def _upload_data(self, data, output_path=None, verbose=0, destroy=1):
+    """def _upload_data(self, data, output_path=None, verbose=0, destroy=1):
         conf = data.config
         # if conf.get("engine", {}) != "PATH":
         if output_path is not None:
@@ -137,7 +174,7 @@ class FLOWClient(object):
                                             meta=data.meta,
                                             extend_sid=data.extend_sid,
                                             partitions=data.partitions)
-        return response, conf["file"]
+        return response, conf["file"]"""
 
     def _output_data_table(self, job_id, role, party_id, task_name):
         response = self._client.output.data_table(job_id, role=role, party_id=party_id, task_name=task_name)
@@ -223,7 +260,9 @@ class QueryJobResponse(object):
         try:
             status = Status(response.get('data')[0]["status"])
             progress = response.get('data')[0]['progress']
-            elapsed = response.get('data')[0]['elapsed'] / 1000
+            elapsed = response.get('data')[0]['elapsed']
+            if elapsed is not None:
+                elapsed = elapsed / 1000
         except Exception as e:
             raise RuntimeError(f"query job error, response: {json.dumps(response, indent=4)}") from e
         self.status = status

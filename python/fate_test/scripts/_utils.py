@@ -6,6 +6,7 @@ import uuid
 from pathlib import Path
 
 import click
+
 from fate_test._client import Clients
 from fate_test._config import Config
 from fate_test._flow_client import DataProgress, UploadDataResponse, QueryJobResponse
