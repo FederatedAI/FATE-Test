@@ -42,11 +42,11 @@ class FLOWClient(object):
     def set_address(self, address):
         self.address = address
 
-    """def transform_local_file_to_dataframe(self, data: Data, callback=None, output_path=None):
+    def transform_local_file_to_dataframe(self, data: Data, callback=None, output_path=None):
         #data_warehouse = self.upload_data(data, callback, output_path)
         #status = self.transform_to_dataframe(data.namespace, data.table_name, data_warehouse, callback)
         status = self.upload_file_and_convert_to_dataframe(data, callback, output_path)
-        return status"""
+        return status
 
     def upload_file_and_convert_to_dataframe(self, data: Data, callback=None, output_path=None):
         conf = data.config
@@ -72,15 +72,16 @@ class FLOWClient(object):
         try:
             if callback is not None:
                 callback(response)
-            code = response["code"]
-            if code != 0:
-                raise ValueError(f"Return code {code}!=0")
+                status = self._awaiting(response["job_id"], "local", 0)
+                status = str(status).lower()
+            else:
+                status = response["retmsg"]
 
-            job_id = response["job_id"]
-        except BaseException:
-            raise ValueError(f"Upload data fails, response={response}")
-            # self.monitor_status(job_id, role=self.role, party_id=self.party_id)
+        except Exception as e:
+            raise RuntimeError(f"upload data failed") from e
+        job_id = response["job_id"]
         self._awaiting(job_id, "local", 0)
+        return status
 
     """def upload_data(self, data: Data, callback=None, output_path=None):
         response, file_path = self._upload_data(data, output_path=output_path)
