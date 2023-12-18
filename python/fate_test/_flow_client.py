@@ -21,7 +21,6 @@ from datetime import timedelta
 from pathlib import Path
 
 from fate_client.flow_sdk import FlowClient
-
 from fate_test import _config
 from fate_test._parser import Data
 
@@ -125,7 +124,7 @@ class FLOWClient(object):
         try:
             table_name = data.config['table_name'] if data.config.get(
                 'table_name', None) is not None else data.config.get('name')
-            self._client.table.delete(table_name=table_name, namespace=data.config['namespace'])
+            self._client.table.delete(name=table_name, namespace=data.config['namespace'])
         except Exception as e:
             raise RuntimeError(f"delete data failed") from e
 
