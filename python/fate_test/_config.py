@@ -56,7 +56,7 @@ parties:
   arbiter: ['10000']
 services:
   - flow_services:
-      - {address: 127.0.0.1:9380, parties: [9999, 10000]}
+      - {address: 127.0.0.1:9380, parties: ['9999', '10000']}
     serving_setting:
       address: 127.0.0.1:8059
 
