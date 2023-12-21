@@ -51,12 +51,12 @@ clean_data: true
 
 # participating parties' id and correponding flow service ip & port information
 parties:
-  guest: [9999]
-  host: [10000, 9999]
-  arbiter: [10000]
+  guest: ['9999']
+  host: ['10000', '9999']
+  arbiter: ['10000']
 services:
   - flow_services:
-      - {address: 127.0.0.1:9380, parties: [9999, 10000]}
+      - {address: 127.0.0.1:9380, parties: ['9999', '10000']}
     serving_setting:
       address: 127.0.0.1:8059
 
