@@ -6,12 +6,13 @@ import uuid
 from datetime import timedelta
 
 import click
+from ruamel import yaml
+
 from fate_test._client import Clients
 from fate_test._config import Config
 from fate_test._io import LOGGER, echo
 from fate_test.scripts._options import SharedOptions
 from fate_test.scripts._utils import _load_testsuites, _delete_data, _big_data_task, _upload_data
-from ruamel import yaml
 
 
 @click.group(name="data")
@@ -84,11 +85,16 @@ def upload(ctx, include, exclude, glob, suite_type, role, config_type, **kwargs)
 
         with open(config_file, 'r', encoding='utf-8') as f:
             upload_data = yaml.safe_load(f.read())
-
         echo.echo(f"\tdataset({len(upload_data['data'])}) {config_file}")
+
+        upload_suite = _load_testsuites(includes=config_file,
+                                        excludes=tuple(),
+                                        glob=None,
+                                        suffix='testsuite.yaml',
+                                        suite_type='testsuite')
         if not yes and not click.confirm("running?"):
             return
-        _upload_data(client, upload_data, config_inst)
+        _upload_data(client, upload_suite, config_inst)
         echo.farewell()
         echo.echo(f"testsuite namespace: {namespace}", fg='red')
 
