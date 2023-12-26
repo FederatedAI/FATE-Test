@@ -87,11 +87,12 @@ def upload(ctx, include, exclude, glob, suite_type, role, config_type, **kwargs)
             upload_data = yaml.safe_load(f.read())
         echo.echo(f"\tdataset({len(upload_data['data'])}) {config_file}")
 
-        upload_suite = _load_testsuites(includes=config_file,
+        upload_suite = _load_testsuites(includes=[config_file],
                                         excludes=tuple(),
                                         glob=None,
                                         suffix='testsuite.yaml',
-                                        suite_type='testsuite')
+                                        suite_type='testsuite')[0]
+
         if not yes and not click.confirm("running?"):
             return
         _upload_data(client, upload_suite, config_inst)
