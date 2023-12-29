@@ -47,42 +47,41 @@ shown in last step
 
 ## command types
 
-- [suite](../api/fate_test.md#testsuite): used for running [testsuites](../api/fate_test.md#testsuite-configuration),
+- suite: used for running testsuites,
   collection of FATE jobs
 
   ```bash
   fate_test suite -i <path contains *testsuite.yaml>
   ```
 
-- [data](../api/fate_test.md#data): used for upload, delete, and generate dataset
+- data: used for upload, delete, and generate dataset
 
-    - [upload/delete data](../api/fate_test.md#data-command-options) command:
+    - upload/delete data command:
 
       ```bash
       fate_test data [upload|delete] -i <path1 contains *testsuite.yaml | *benchmark.yaml>
       ```
-    - [upload example data of min_test/all_examples](../api/fate_test.md#data-command-options) command:
+    - upload example data of min_test/all_examples command:
 
       ```bash
       fate_test data upload -t min_test
       fate_test data upload -t all_examples
       ```
 
-    - [generate data](../api/fate_test.md#generate-command-options) command:
+    - generate data command:
 
       ```bash
       fate_test data generate -i <path1 contains *testsuite.yaml | *benchmark.yaml>
       ```
 
-- [benchmark-quality](../api/fate_test.md#benchmark-quality): used for comparing modeling quality between FATE
-  and other machine learning systems, as specified
-  in [benchmark job configuration](../api/fate_test.md#benchmark-job-configuration)
+- benchmark-quality: used for comparing modeling quality between FATE
+  and other machine learning systems
 
   ```bash
   fate_test bq -i <path contains *benchmark.yaml>
   ```
 
-- [benchmark-performance](../api/fate_test.md#benchmark-performance): used for checking FATE algorithm performance; user
+- benchmark-performance: used for checking FATE algorithm performance; user
   should first generate and upload data before running performance testsuite
 
   ```bash
