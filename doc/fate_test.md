@@ -42,7 +42,7 @@ A collection of useful tools to running FATE tests and PipeLine tasks.
    fate_test benchmark-quality -i <path contains *performance.yaml>
    ```
 
-7useful logs or exception will be saved to logs dir with namespace
+7.  useful logs or exception will be saved to logs dir with namespace
 shown in last step
 
 ## command types
