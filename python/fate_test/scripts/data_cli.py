@@ -72,7 +72,7 @@ def upload(ctx, include, exclude, glob, suite_type, role, config_type, **kwargs)
             return
 
         for suite in suites:
-            _upload_data(client, suite, config_inst)
+            _upload_data(client, suite, config_inst, partitions=ctx.obj["partitions"])
     else:
         config = get_config(config_inst)
         if config_type == 'min_test':
@@ -211,7 +211,7 @@ def generate(ctx, include, host_data_type, encryption_type, match_rate, sparsity
             output_dir = output_path if output_path else os.path.abspath(config_inst.cache_directory)
             _update_data_path(suite, output_dir)
             # echo.echo(f"data files: {[data.file for data in suite.dataset]}")
-            _upload_data(client, suite, config_inst)
+            _upload_data(client, suite, config_inst, partitions=ctx.obj["partitions"])
 
 
 @data_group.command("query_schema")

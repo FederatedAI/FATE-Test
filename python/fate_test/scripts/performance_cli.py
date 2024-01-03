@@ -107,7 +107,7 @@ def run_task(ctx, job_type, include, timeout, epochs,
 
             if not skip_data:
                 try:
-                    _upload_data(client, suite, config_inst)
+                    _upload_data(client, suite, config_inst, partitions=ctx.obj["partitions"])
                 except Exception as e:
                     raise RuntimeError(f"exception occur while uploading data for {suite.path}") from e
 

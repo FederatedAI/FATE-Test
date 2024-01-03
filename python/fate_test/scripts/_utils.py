@@ -95,7 +95,9 @@ def _load_testsuites(includes, excludes, glob, provider=None, suffix="testsuite.
 
 
 @LOGGER.catch
-def _upload_data(clients: Clients, suite, config: Config, output_path=None):
+def _upload_data(clients: Clients, suite, config: Config, output_path=None, **kwargs):
+    if kwargs.get("partitions") is not None:
+        _update_data_config(suite, partitions=kwargs.get("partitions"))
     with click.progressbar(length=len(suite.dataset),
                            label="dataset",
                            show_eta=False,
@@ -198,3 +200,10 @@ def _update_data_path(suite, output_dir):
         data_file_path = os.path.join(str(output_dir), data_name)
         data.file = data_file_path
         data.config['file'] = data_file_path
+
+
+def _update_data_config(suite, partitions=None):
+    if partitions is not None:
+        for data in suite.dataset:
+            data.config['partitions'] = partitions
+            data.partitions = partitions

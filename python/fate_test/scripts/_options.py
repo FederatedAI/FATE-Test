@@ -1,6 +1,7 @@
 import time
 
 import click
+
 from fate_test._config import parse_config, default_config
 from fate_test.scripts._utils import _set_namespace
 
@@ -21,6 +22,8 @@ class SharedOptions(object):
         "extend_sid": (('--extend-sid',),
                        dict(type=bool, is_flag=True, help="whether to append uuid as sid when uploading data",
                             default=None), None),
+        "partitions": (('--partitions', '-dp'),
+                       dict(type=int, help="data partitions when uploading data", default=None), None)
         # "auto_increasing_sid": (('--auto_increasing_sid',),
         #                        dict(type=bool, is_flag=True, help="whether to generate sid value starting at 0",
         #                             default=None), None),

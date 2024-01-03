@@ -108,7 +108,7 @@ def run_suite(ctx, include, exclude, glob,
             echo.echo(f"[{i + 1}/{len(suites)}]start at {time.strftime('%Y-%m-%d %X')} {suite.path}", fg='red')
             if not skip_data:
                 try:
-                    _upload_data(client, suite, config_inst)
+                    _upload_data(client, suite, config_inst, partitions=ctx.obj["partitions"])
                 except Exception as e:
                     raise RuntimeError(f"exception occur while uploading data for {suite.path}") from e
             if data_only:
