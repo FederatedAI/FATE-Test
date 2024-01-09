@@ -133,7 +133,15 @@ fate_test suite --help
 
     will remove data from storage after finishing running testsuites
 
-14. yes:
+14. engine-run:
+
+    ```bash
+    fate_test suite -i *path1* --engine-run cores=4 --engine-run spark.driver.memory=8G --skip-data
+    ```
+
+    will run testsuites in *path1* with engine run params set to specified values
+
+15. yes:
 
     ```bash
     fate_test suite -i <path1 contains *testsuite.yaml> --yes
@@ -363,7 +371,15 @@ fate_test benchmark-quality --help
    will remove data from storage after finishing running benchmark
    testsuites
 
-10. yes:
+11. engine-run:
+
+    ```bash
+    fate_test benchmark-quality -i *path1* --engine-run cores=4 --engine-run spark.driver.memory=8G --skip-data
+    ```
+
+    will run testsuites in *path1* with engine run params set to specified values
+
+12. yes:
     ```bash
     fate_test benchmark-quality -i <path1 contains *benchmark.yaml> --yes
     ```
@@ -650,7 +666,15 @@ fate_test performance --help
     will run testsuites in *path1* without removing data from storage
     after tasks finish
 
-15. yes:
+15. engine-run:
+
+    ```bash
+    fate_test performance -i *path1* --engine-run cores=4 --engine-run spark.driver.memory=8G --skip-data
+    ```
+
+    will run testsuites in *path1* with engine run params set to specified values
+
+16. yes:
 
     ```bash
     fate_test performance -i <path1 contains *testsuite.yaml> --yes
