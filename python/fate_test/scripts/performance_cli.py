@@ -68,6 +68,8 @@ def run_task(ctx, job_type, include, timeout, epochs,
         config_inst.update_conf(task_cores=task_cores)
     if timeout is not None:
         config_inst.update_conf(timeout=timeout)
+    if ctx.obj["engine_run"][0] is not None:
+        config_inst.update_conf(engine_run=dict(ctx.obj["engine_run"]))
     """if ctx.obj["auto_increasing_sid"] is not None:
         config_inst.auto_increasing_sid = ctx.obj["auto_increasing_sid"]"""
     namespace = ctx.obj["namespace"]

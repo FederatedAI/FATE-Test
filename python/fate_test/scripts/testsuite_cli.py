@@ -72,6 +72,8 @@ def run_suite(ctx, include, exclude, glob,
     config_inst = ctx.obj["config"]
     if ctx.obj["extend_sid"] is not None:
         config_inst.extend_sid = ctx.obj["extend_sid"]
+    if ctx.obj["engine_run"][0] is not None:
+        config_inst.update_conf(engine_run=dict(ctx.obj["engine_run"]))
     if task_cores is not None:
         config_inst.update_conf(task_cores=task_cores)
     if timeout is not None:

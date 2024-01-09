@@ -6,6 +6,16 @@ from fate_test._config import parse_config, default_config
 from fate_test.scripts._utils import _set_namespace
 
 
+def parse_custom_type(value):
+    parts = value.split('=')
+    if len(parts) == 2 and parts[1].isdigit():
+        return parts[0], int(parts[1])
+    elif len(parts) == 2 and isinstance(parts[1], str):
+        return parts[0], parts[1]
+    else:
+        raise click.BadParameter('Invalid input format. Use "str=int" or "str=str".')
+
+
 class SharedOptions(object):
     _options = {
         "config": (('-c', '--config'),
@@ -23,7 +33,11 @@ class SharedOptions(object):
                        dict(type=bool, is_flag=True, help="whether to append uuid as sid when uploading data",
                             default=None), None),
         "partitions": (('--partitions', '-dp'),
-                       dict(type=int, help="data partitions when uploading data", default=None), None)
+                       dict(type=int, help="data partitions when uploading data", default=None), None),
+        "engine_run": (('--engine-run', '-eg'), dict(type=parse_custom_type,
+                                                     help="config for pipeline task `engine run`, "
+                                                          "specify config params in str=int or str=str format",
+                                                     multiple=True, default=[None]), None)
         # "auto_increasing_sid": (('--auto_increasing_sid',),
         #                        dict(type=bool, is_flag=True, help="whether to generate sid value starting at 0",
         #                             default=None), None),
