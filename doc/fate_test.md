@@ -47,14 +47,14 @@ shown in last step
 
 ## command types
 
-- suite: used for running testsuites,
+- [suite](./fate_test_command.md#testsuite): used for running testsuites,
   collection of FATE jobs
 
   ```bash
   fate_test suite -i <path contains *testsuite.yaml>
   ```
 
-- data: used for upload, delete, and generate dataset
+- [data](./fate_test_command.md#data): used for upload, delete, and generate dataset
 
     - upload/delete data command:
 
@@ -74,14 +74,15 @@ shown in last step
       fate_test data generate -i <path1 contains *testsuite.yaml | *benchmark.yaml>
       ```
 
-- benchmark-quality: used for comparing modeling quality between FATE
+- [benchmark-quality](./fate_test_command.md#benchmark-quality): used for comparing modeling quality between FATE
   and other machine learning systems
 
   ```bash
   fate_test bq -i <path contains *benchmark.yaml>
   ```
 
-- benchmark-performance: used for checking FATE algorithm performance; user
+- [benchmark-performance](./fate_test_command.md#benchmark-performance): used for checking FATE algorithm performance;
+  user
   should first generate and upload data before running performance testsuite
 
   ```bash
