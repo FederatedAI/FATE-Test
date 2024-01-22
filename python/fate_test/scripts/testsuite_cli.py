@@ -172,7 +172,13 @@ def _run_pipeline_jobs(config: Config, suite: Testsuite, namespace: str, data_na
                     os.environ.pop("pipeline_job_info")
 
                 except Exception as e:
-                    _raise(e)
+                    job_info = os.environ.get("pipeline_job_info")
+                    if job_info is None:
+                        job_id, status, time_elapsed, event = None, 'failed', None, None
+                    else:
+                        job_id, status, time_elapsed, event = extract_job_status(job_info, client, guest_party_id)
+                    _raise(e, job_id=job_id, status=status, event=event, time_elapsed=time_elapsed)
+                    os.environ.pop("pipeline_job_info")
                     continue
             else:
                 try:
@@ -187,7 +193,10 @@ def _run_pipeline_jobs(config: Config, suite: Testsuite, namespace: str, data_na
 
                 except Exception as e:
                     job_info = os.environ.get("pipeline_job_info")
-                    job_id, status, time_elapsed, event = extract_job_status(job_info, client, guest_party_id)
+                    if job_info is None:
+                        job_id, status, time_elapsed, event = None, 'failed', None, None
+                    else:
+                        job_id, status, time_elapsed, event = extract_job_status(job_info, client, guest_party_id)
                     _raise(e, job_id=job_id, status=status, event=event, time_elapsed=time_elapsed)
                     os.environ.pop("pipeline_job_info")
                     continue
