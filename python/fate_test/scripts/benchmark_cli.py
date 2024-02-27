@@ -6,6 +6,7 @@ from datetime import timedelta
 from inspect import signature
 
 import click
+
 from fate_test._client import Clients
 from fate_test._config import Config
 from fate_test._io import LOGGER, echo
@@ -59,6 +60,8 @@ def run_benchmark(ctx, include, exclude, glob, skip_data, tol, clean_data, stora
         config_inst.update_conf(task_cores=task_cores)
     if timeout is not None:
         config_inst.update_conf(timeout=timeout)
+    if ctx.obj["engine_run"][0] is not None:
+        config_inst.update_conf(engine_run=dict(ctx.obj["engine_run"]))
 
     """if ctx.obj["auto_increasing_sid"] is not None:
         config_inst.auto_increasing_sid = ctx.obj["auto_increasing_sid"]"""
@@ -85,7 +88,7 @@ def run_benchmark(ctx, include, exclude, glob, skip_data, tol, clean_data, stora
             echo.echo(f"[{i + 1}/{len(suites)}]start at {time.strftime('%Y-%m-%d %X')} {suite.path}", fg='red')
             if not skip_data:
                 try:
-                    _upload_data(client, suite, config_inst)
+                    _upload_data(client, suite, config_inst, partitions=ctx.obj["partitions"])
                 except Exception as e:
                     raise RuntimeError(f"exception occur while uploading data for {suite.path}") from e
                 if kwargs.get("data_only"):

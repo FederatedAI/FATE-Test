@@ -72,6 +72,8 @@ def run_suite(ctx, include, exclude, glob,
     config_inst = ctx.obj["config"]
     if ctx.obj["extend_sid"] is not None:
         config_inst.extend_sid = ctx.obj["extend_sid"]
+    if ctx.obj["engine_run"][0] is not None:
+        config_inst.update_conf(engine_run=dict(ctx.obj["engine_run"]))
     if task_cores is not None:
         config_inst.update_conf(task_cores=task_cores)
     if timeout is not None:
@@ -108,7 +110,7 @@ def run_suite(ctx, include, exclude, glob,
             echo.echo(f"[{i + 1}/{len(suites)}]start at {time.strftime('%Y-%m-%d %X')} {suite.path}", fg='red')
             if not skip_data:
                 try:
-                    _upload_data(client, suite, config_inst)
+                    _upload_data(client, suite, config_inst, partitions=ctx.obj["partitions"])
                 except Exception as e:
                     raise RuntimeError(f"exception occur while uploading data for {suite.path}") from e
             if data_only:
@@ -170,7 +172,13 @@ def _run_pipeline_jobs(config: Config, suite: Testsuite, namespace: str, data_na
                     os.environ.pop("pipeline_job_info")
 
                 except Exception as e:
-                    _raise(e)
+                    job_info = os.environ.get("pipeline_job_info")
+                    if job_info is None:
+                        job_id, status, time_elapsed, event = None, 'failed', None, None
+                    else:
+                        job_id, status, time_elapsed, event = extract_job_status(job_info, client, guest_party_id)
+                    _raise(e, job_id=job_id, status=status, event=event, time_elapsed=time_elapsed)
+                    os.environ.pop("pipeline_job_info")
                     continue
             else:
                 try:
@@ -185,7 +193,10 @@ def _run_pipeline_jobs(config: Config, suite: Testsuite, namespace: str, data_na
 
                 except Exception as e:
                     job_info = os.environ.get("pipeline_job_info")
-                    job_id, status, time_elapsed, event = extract_job_status(job_info, client, guest_party_id)
+                    if job_info is None:
+                        job_id, status, time_elapsed, event = None, 'failed', None, None
+                    else:
+                        job_id, status, time_elapsed, event = extract_job_status(job_info, client, guest_party_id)
                     _raise(e, job_id=job_id, status=status, event=event, time_elapsed=time_elapsed)
                     os.environ.pop("pipeline_job_info")
                     continue

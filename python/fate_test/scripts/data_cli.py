@@ -1,17 +1,15 @@
 import os
 import re
-import sys
-import time
 import uuid
-from datetime import timedelta
 
 import click
+from ruamel import yaml
+
 from fate_test._client import Clients
 from fate_test._config import Config
 from fate_test._io import LOGGER, echo
 from fate_test.scripts._options import SharedOptions
-from fate_test.scripts._utils import _load_testsuites, _delete_data, _big_data_task, _upload_data
-from ruamel import yaml
+from fate_test.scripts._utils import _load_testsuites, _delete_data, _big_data_task, _upload_data, _update_data_path
 
 
 @click.group(name="data")
@@ -74,7 +72,7 @@ def upload(ctx, include, exclude, glob, suite_type, role, config_type, **kwargs)
             return
 
         for suite in suites:
-            _upload_data(client, suite, config_inst)
+            _upload_data(client, suite, config_inst, partitions=ctx.obj["partitions"])
     else:
         config = get_config(config_inst)
         if config_type == 'min_test':
@@ -161,11 +159,11 @@ def delete(ctx, include, exclude, glob, yes, suite_type, **kwargs):
               help="Generated data will be uploaded")
 @click.option('--remove-data', is_flag=True, default=False,
               help="The generated data will be deleted")
-@click.option('--use-local-data', is_flag=True, default=False,
-              help="The existing data of the server will be uploaded, This parameter is not recommended for "
-                   "distributed applications")
+# @click.option('--use-local-data', is_flag=True, default=False,
+#               help="The existing data of the server will be uploaded, This parameter is not recommended for "
+#                    "distributed applications")
 # @click.option('--parallelize', is_flag=True, default=False,
-#              help="It is directly used to upload data, and will not generate data")
+#               help="It is directly used to upload data, and will not generate data")
 @SharedOptions.get_shared_options(hidden=True)
 @click.pass_context
 def generate(ctx, include, host_data_type, encryption_type, match_rate, sparsity, guest_data_size,
@@ -208,46 +206,12 @@ def generate(ctx, include, host_data_type, encryption_type, match_rate, sparsity
     _big_data_task(include, guest_data_size, host_data_size, guest_feature_num, host_feature_num, host_data_type,
                    config_inst, encryption_type, match_rate, sparsity, force, split_host, output_path)
     if upload_data:
-        """if use_local_data:
-            _config.use_local_data = 0
-        _config.data_switch = remove_data"""
         client = Clients(config_inst)
         for suite in suites:
-            _upload_data(client, suite, config_inst)
-
-
-"""@data_group.command("download")
-@click.option("-t", "--type", type=click.Choice(["mnist"]), default="mnist",
-              help="config file")
-@click.option('-o', '--output-path', type=click.Path(exists=True),
-              help="output path of mnist data, the default path is examples/data")
-@SharedOptions.get_shared_options(hidden=True)
-@click.pass_context
-def download_mnists(ctx, output_path, **kwargs):
-    ctx.obj.update(**kwargs)
-    ctx.obj.post_process()
-    namespace = ctx.obj["namespace"]
-    config_inst = ctx.obj["config"]
-    yes = ctx.obj["yes"]
-    echo.welcome()
-    echo.echo(f"testsuite namespace: {namespace}", fg='red')
-
-    if output_path is None:
-        config = get_config(config_inst)
-        output_path = str(config.data_base_dir) + "/examples/data/"
-    if not yes and not click.confirm("running?"):
-        return
-    try:
-        download_mnist(Path(output_path), "mnist_train")
-        download_mnist(Path(output_path), "mnist_eval", is_train=False)
-    except Exception:
-        exception_id = uuid.uuid1()
-        echo.echo(f"exception_id={exception_id}")
-        LOGGER.exception(f"exception id: {exception_id}")
-    finally:
-        echo.stdout_newline()
-    echo.farewell()
-    echo.echo(f"testsuite namespace: {namespace}", fg='red')"""
+            output_dir = output_path if output_path else os.path.abspath(config_inst.cache_directory)
+            _update_data_path(suite, output_dir)
+            # echo.echo(f"data files: {[data.file for data in suite.dataset]}")
+            _upload_data(client, suite, config_inst, partitions=ctx.obj["partitions"])
 
 
 @data_group.command("query_schema")
@@ -354,69 +318,3 @@ def download_mnist(base, name, is_train=True):
     with config_path.open("w") as f:
         yaml.safe_dump(config, f, indent=2, default_flow_style=False)
 
-
-def data_upload(clients, conf: Config, upload_config):
-    def _await_finish(job_id, task_name=None):
-        deadline = time.time() + sys.maxsize
-        start = time.time()
-        param = dict(
-            job_id=job_id,
-            role=None
-        )
-        while True:
-            stdout = clients["guest_0"].flow_client("job/query", param)
-            status = stdout["data"][0]["f_status"]
-            elapse_seconds = int(time.time() - start)
-            date = time.strftime('%Y-%m-%d %X')
-            if task_name:
-                log_msg = f"[{date}][{task_name}]{status}, elapse: {timedelta(seconds=elapse_seconds)}"
-            else:
-                log_msg = f"[{date}]{job_id} {status}, elapse: {timedelta(seconds=elapse_seconds)}"
-            if (status == "running" or status == "waiting") and time.time() < deadline:
-                print(log_msg, end="\r")
-                time.sleep(1)
-                continue
-            else:
-                print(" " * 60, end="\r")  # clean line
-                echo.echo(log_msg)
-                return status
-
-    task_data = upload_config["data"]
-    for i, data in enumerate(task_data):
-        format_msg = f"@{data['file']} >> {data['namespace']}.{data['table_name']}"
-        echo.echo(f"[{time.strftime('%Y-%m-%d %X')}]uploading {format_msg}")
-        try:
-            data["file"] = str(os.path.join(conf.data_base_dir, data["file"]))
-            param = dict(
-                file=data["file"],
-                head=data["head"],
-                partition=data["partition"],
-                table_name=data["table_name"],
-                namespace=data["namespace"]
-            )
-            stdout = clients["guest_0"].flow_client("data/upload", param, drop=1)
-            job_id = stdout.get('jobId', None)
-            echo.echo(f"[{time.strftime('%Y-%m-%d %X')}]upload done {format_msg}, job_id={job_id}\n")
-            if job_id is None:
-                echo.echo("table already exist. To upload again, Please add '-f 1' in start cmd")
-                continue
-            _await_finish(job_id)
-            param = dict(
-                table_name=data["table_name"],
-                namespace=data["namespace"]
-            )
-            stdout = clients["guest_0"].flow_client("table/info", param)
-
-            count = stdout["data"]["count"]
-            if count != data["count"]:
-                raise AssertionError("Count of upload file is not as expect, count is: {},"
-                                     "expect is: {}".format(count, data["count"]))
-            echo.echo(f"[{time.strftime('%Y-%m-%d %X')}] check_data_out {stdout} \n")
-        except Exception as e:
-            exception_id = uuid.uuid1()
-            echo.echo(f"exception in {data['file']}, exception_id={exception_id}")
-            LOGGER.exception(f"exception id: {exception_id}")
-            echo.echo(f"upload {i + 1}th data {data['table_name']} fail, exception_id: {exception_id}")
-            # raise RuntimeError(f"exception occur while uploading data for {data['file']}") from e
-        finally:
-            echo.stdout_newline()
