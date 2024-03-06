@@ -51,13 +51,11 @@ from fate_test.utils import TxtStyle, parse_job_time_info, pretty_time_info_summ
               help="Extract performance time consuming from history tags for comparison")
 @click.option("--skip-data", is_flag=True, default=False,
               help="skip uploading data specified in testsuite")
-@click.option("--provider", type=str,
-              help="Select the fate version, for example: fate@1.7")
 @click.option("--disable-clean-data", "clean_data", flag_value=False, default=None)
 @SharedOptions.get_shared_options(hidden=True)
 @click.pass_context
 def run_task(ctx, job_type, include, timeout, epochs,
-             max_depth, num_trees, task_cores, storage_tag, history_tag, skip_data, clean_data, provider, **kwargs):
+             max_depth, num_trees, task_cores, storage_tag, history_tag, skip_data, clean_data, **kwargs):
     """
     Test the performance of big data tasks, alias: bp
     """
@@ -70,6 +68,8 @@ def run_task(ctx, job_type, include, timeout, epochs,
         config_inst.update_conf(task_cores=task_cores)
     if timeout is not None:
         config_inst.update_conf(timeout=timeout)
+    if ctx.obj["engine_run"][0] is not None:
+        config_inst.update_conf(engine_run=dict(ctx.obj["engine_run"]))
     """if ctx.obj["auto_increasing_sid"] is not None:
         config_inst.auto_increasing_sid = ctx.obj["auto_increasing_sid"]"""
     namespace = ctx.obj["namespace"]
@@ -90,7 +90,7 @@ def run_task(ctx, job_type, include, timeout, epochs,
     echo.welcome()
     echo.echo(f"testsuite namespace: {namespace}", fg='red')
     echo.echo("loading testsuites:")
-    suites = _load_testsuites(includes=include, excludes=tuple(), glob=None, provider=provider,
+    suites = _load_testsuites(includes=include, excludes=tuple(), glob=None,
                               suffix="performance.yaml", suite_type="performance")
     for i, suite in enumerate(suites):
         echo.echo(f"\tdataset({len(suite.dataset)}) pipeline jobs({len(suite.pipeline_jobs)}) {suite.path}")
@@ -109,7 +109,7 @@ def run_task(ctx, job_type, include, timeout, epochs,
 
             if not skip_data:
                 try:
-                    _upload_data(client, suite, config_inst)
+                    _upload_data(client, suite, config_inst, partitions=ctx.obj["partitions"])
                 except Exception as e:
                     raise RuntimeError(f"exception occur while uploading data for {suite.path}") from e
 

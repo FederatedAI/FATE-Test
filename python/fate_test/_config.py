@@ -186,7 +186,7 @@ class Config(object):
         self.auto_increasing_sid = None
         self.task_cores = None
         self.timeout = None
-        # self.work_mode = config.get("work_mode", 0)
+        self.engine_run = None
 
         service_id = 0
         os.makedirs(os.path.dirname(self.cache_directory), exist_ok=True)
