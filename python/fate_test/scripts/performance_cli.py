@@ -166,7 +166,7 @@ def _run_performance_jobs(config: Config, suite: PerformanceSuite, namespace: st
     # pipeline demo goes here
     job_n = len(suite.pipeline_jobs)
     fate_base = config.fate_base
-    PYTHONPATH = os.environ.get('PYTHONPATH') + ":" + os.path.join(fate_base, "python")
+    PYTHONPATH = os.environ.get('PYTHONPATH', default="") + ":" + os.path.join(fate_base, "python")
     os.environ['PYTHONPATH'] = PYTHONPATH
     job_time_history = {}
     for j, job in enumerate(suite.pipeline_jobs):

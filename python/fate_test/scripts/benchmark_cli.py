@@ -119,7 +119,7 @@ def _run_benchmark_pairs(config: Config, suite: BenchmarkSuite, tol: float, name
     # pipeline demo goes here
     pair_n = len(suite.pairs)
     fate_base = config.fate_base
-    PYTHONPATH = os.environ.get('PYTHONPATH') + ":" + os.path.join(fate_base, "python")
+    PYTHONPATH = os.environ.get('PYTHONPATH', default="") + ":" + os.path.join(fate_base, "python")
     os.environ['PYTHONPATH'] = PYTHONPATH
     for i, pair in enumerate(suite.pairs):
         echo.echo(f"Running [{i + 1}/{pair_n}] group: {pair.pair_name}")
