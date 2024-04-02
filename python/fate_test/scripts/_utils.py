@@ -6,6 +6,7 @@ import uuid
 from pathlib import Path
 
 import click
+from fate_llm.utils import LlmSuite
 
 from fate_test._client import Clients
 from fate_test._config import Config
@@ -19,7 +20,7 @@ def _big_data_task(includes, guest_data_size, host_data_size, guest_feature_num,
     from fate_test.scripts import generate_mock_data
 
     def _find_testsuite_files(path):
-        suffix = ["testsuite.yaml", "benchmark.yaml", "performance.yaml"]
+        suffix = ["testsuite.yaml", "benchmark.yaml", "performance.yaml", "llmsuite.yaml"]
         if isinstance(path, str):
             path = Path(path)
         if path.is_file():
@@ -85,6 +86,8 @@ def _load_testsuites(includes, excludes, glob, provider=None, suffix="testsuite.
                 suite = BenchmarkSuite.load(suite_path.resolve())
             elif suite_type == "performance":
                 suite = PerformanceSuite.load(suite_path.resolve())
+            elif suite_type == "llmsuite":
+                suite = LlmSuite.load(suite_path.resolve())
             else:
                 raise ValueError(f"Unsupported suite type: {suite_type}. Only accept type 'testsuite' or 'benchmark'.")
         except Exception as e:
@@ -207,3 +210,10 @@ def _update_data_config(suite, partitions=None):
         for data in suite.dataset:
             data.config['partitions'] = partitions
             data.partitions = partitions
+
+
+def _obtain_model_output_path(config, job_id, task_name, client, role, party_id):
+
+    output_path = os.path.join(config.data_base_dir, "fate_flow",
+                             "model", job_id, role, party_id, task_name, "0", "output", "output_model")
+    return output_path

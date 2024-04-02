@@ -1,0 +1,206 @@
+#
+#  Copyright 2019 The FATE Authors. All Rights Reserved.
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+#
+
+import os
+import time
+import uuid
+from datetime import timedelta
+from inspect import signature
+
+import click
+import yaml
+from fate_llm.scripts.eval_cli import run_job_eval
+
+from fate_test._client import Clients
+from fate_test._config import Config
+from fate_test._io import LOGGER, echo
+from fate_test.scripts._options import SharedOptions
+from fate_test.scripts._utils import _load_testsuites, _load_module_from_script
+from fate_test.utils import extract_job_status
+
+"""
+@click.option('-uj', '--update-job-parameters', default="{}", type=str,
+              help="a json string that represents mapping for replacing fields in job conf, example format: "'{job_name: param_name1: param_val1, param_name2=param_val2}'")
+"""
+@click.command("llmsuite")
+@click.option('-i', '--include', required=True, type=click.Path(exists=True), multiple=True,
+              metavar="<include>",
+              help="include *llmsuite.yaml under these paths")
+@click.option('-e', '--exclude', type=click.Path(exists=True), multiple=True,
+              help="exclude *llmsuite.yaml under these paths")
+@click.option('-a', '--algorithm-suite', type=str, multiple=True,
+              help="run built-in algorithm suite, if given, ignore include/exclude")
+@click.option('-p', '--task-cores', type=int, help="processors per node")
+@click.option('-m', '--timeout', type=int,
+              help="maximum running time of job")
+@click.option("-g", '--glob', type=str,
+              help="glob string to filter sub-directory of path specified by <include>")
+@click.option("--provider", type=str,
+              help="Select the fate version, for example: fate@2.0-beta")
+@click.option('-c', '--eval-config', optional=True, type=click.Path(exists=True), help='Path to FATE Llm evaluation config. '
+                                                        'If none, use default config.')
+@click.option('--skip-evaluate', is_flag=True, default=False,
+              help="skip evaluation after training model")
+@SharedOptions.get_shared_options(hidden=True)
+@click.pass_context
+def run_llmsuite(ctx, include, exclude, algorithm_suite, glob, provider, task_cores, timeout, eval_config, skip_evaluate, **kwargs):
+    """
+    process llmsuite
+    """
+    ctx.obj.update(**kwargs)
+    ctx.obj.post_process()
+    config_inst = ctx.obj["config"]
+    if ctx.obj["engine_run"][0] is not None:
+        config_inst.update_conf(engine_run=dict(ctx.obj["engine_run"]))
+    if task_cores is not None:
+        config_inst.update_conf(task_cores=task_cores)
+    if timeout is not None:
+        config_inst.update_conf(timeout=timeout)
+
+
+    namespace = ctx.obj["namespace"]
+    yes = ctx.obj["yes"]
+    data_namespace_mangling = ctx.obj["namespace_mangling"]
+    # prepare output dir and json hooks
+    # _add_replace_hook(replace)
+    echo.welcome()
+    echo.echo(f"llmsuite namespace: {namespace}", fg='red')
+    echo.echo("loading llmsuites:")
+    if algorithm_suite:
+        #@todo: find built-in llmsuite path
+        algorithm_suite_path = [None]
+        suites = _load_testsuites(includes=algorithm_suite_path, excludes=None, glob=None, provider=provider,
+                                  suffix="llmsuite.yaml", suite_type="llmsuite")
+    else:
+        suites = _load_testsuites(includes=include, excludes=exclude, glob=glob, provider=provider,
+                                  suffix="llmsuite.yaml", suite_type="llmsuite")
+    for suite in suites:
+        echo.echo(f"\tllm groups({len(suite.pairs)}) {suite.path}")
+    if not yes and not click.confirm("running?"):
+        return
+
+    echo.stdout_newline()
+    # with Clients(config_inst) as client:
+    client = Clients(config_inst)
+
+    for i, suite in enumerate(suites):
+        # noinspection PyBroadException
+        try:
+            start = time.time()
+            echo.echo(f"[{i + 1}/{len(suites)}]start at {time.strftime('%Y-%m-%d %X')} {suite.path}", fg='red')
+            os.environ['enable_pipeline_job_info_callback'] = '1'
+            try:
+                if eval_config:
+                    config = {}
+                    if eval_config is not None:
+                        with eval_config.open("r") as f:
+                            config.update(yaml.safe_load(f))
+                    eval_conf = config
+                else:
+                    from fate_llm.utils.config import default_eval_config
+                    eval_conf = default_eval_config()
+                _run_llmsuite_pairs(config_inst, suite, namespace, data_namespace_mangling, client,
+                                    skip_evaluate, eval_conf)
+            except Exception as e:
+                raise RuntimeError(f"exception occur while running benchmark jobs for {suite.path}") from e
+
+            echo.echo(f"[{i + 1}/{len(suites)}]elapse {timedelta(seconds=int(time.time() - start))}", fg='red')
+        except Exception:
+            exception_id = uuid.uuid1()
+            echo.echo(f"exception in {suite.path}, exception_id={exception_id}")
+            LOGGER.exception(f"exception id: {exception_id}")
+        finally:
+            echo.stdout_newline()
+    # non_success_summary()
+    echo.farewell()
+    echo.echo(f"llmsuite namespace: {namespace}", fg='red')
+
+
+@LOGGER.catch
+def _run_llmsuite_pairs(config: Config, suite, namespace: str,
+                        data_namespace_mangling: bool, clients: Clients, skip_evaluate: bool, eval_conf: dict):
+    client = clients['guest_0']
+    guest_party_id = config.parties.role_to_party("guest")[0]
+    # pipeline demo goes here
+    pair_n = len(suite.pairs)
+    # fate_base = config.fate_base
+    # PYTHONPATH = os.environ.get('PYTHONPATH') + ":" + os.path.join(fate_base, "python")
+    # os.environ['PYTHONPATH'] = PYTHONPATH
+    suite_results = dict()
+    for i, pair in enumerate(suite.pairs):
+        echo.echo(f"Running [{i + 1}/{pair_n}] group: {pair.pair_name}")
+        job_n = len(pair.jobs)
+        # time_dict = dict()
+        job_results = dict()
+        for j, job in enumerate(pair.jobs):
+            echo.echo(f"Running [{j + 1}/{job_n}] job: {job.job_name}")
+
+            def _raise(err_msg, status="failed", job_id=None, event=None, time_elapsed=None):
+                exception_id = str(uuid.uuid1())
+                # suite.update_status(job_name=job_name, job_id=job_id, exception_id=exception_id, status=status,
+                #                    event=event, time_elapsed=time_elapsed)
+                echo.file(f"exception({exception_id}), error message:\n{err_msg}")
+
+            job_name, script_path, conf_path = job.job_name, job.script_path, job.conf_path
+            param = Config.load_from_file(conf_path)
+            mod = _load_module_from_script(script_path)
+            input_params = signature(mod.main).parameters
+
+            try:
+                # @todo: add update status api to suite
+                _run_mod(mod, input_params, config, param, namespace, data_namespace_mangling)
+                job_info = os.environ.get("pipeline_job_info")
+                job_id, status, time_elapsed, event = extract_job_status(job_info, client, guest_party_id)
+                """suite.update_status(job_name=job_name, job_id=job_id, status=status,
+                                    time_elapsed=time_elapsed,
+                                    event=event)"""
+                if not skip_evaluate:
+                    # @todo: load model with flow api & record evaluate result
+                    job.pretrained_model_path, job.heft_path = None, None
+                    result = run_job_eval(job, eval_conf)
+                    job_results[job_name] = result
+                os.environ.pop("pipeline_job_info")
+
+            except Exception as e:
+                job_info = os.environ.get("pipeline_job_info")
+                if job_info is None:
+                    job_id, status, time_elapsed, event = None, 'failed', None, None
+                else:
+                    job_id, status, time_elapsed, event = extract_job_status(job_info, client,
+                                                                             guest_party_id)
+                _raise(e, job_id=job_id, status=status, event=event, time_elapsed=time_elapsed)
+                os.environ.pop("pipeline_job_info")
+                continue
+        suite_results[pair.pair_name] = job_results
+        for job_name, result in job_results.items():
+            echo.echo(f"Job: {job_name}")
+            echo.echo(result)
+        # todo: record time elapse
+
+
+def _run_mod(mod, input_params, config, param, namespace, data_namespace_mangling):
+    if len(input_params) == 1:
+        mod.main(param=param)
+    elif len(input_params) == 2:
+        mod.main(config=config, param=param)
+    # pipeline script
+    elif len(input_params) == 3:
+        if data_namespace_mangling:
+            mod.main(config=config, param=param, namespace=f"_{namespace}")
+        else:
+            mod.main(config=config, param=param)
+    else:
+        mod.main()

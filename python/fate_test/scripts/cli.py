@@ -20,6 +20,7 @@ from fate_test.scripts._options import SharedOptions
 from fate_test.scripts.benchmark_cli import run_benchmark
 from fate_test.scripts.config_cli import config_group
 from fate_test.scripts.data_cli import data_group
+from fate_test.scripts.llmsuite_cli import run_llmsuite
 # from fate_test.scripts.flow_test_cli import flow_group
 from fate_test.scripts.performance_cli import run_task
 # from fate_test.scripts.quick_test_cli import unittest_group
@@ -32,6 +33,7 @@ commands = {
     "performance": run_task,
     "benchmark-quality": run_benchmark,
     "data": data_group,
+    "llmsuite": run_llmsuite
     # "unittest": unittest_group
 }
 

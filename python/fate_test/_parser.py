@@ -344,7 +344,74 @@ class PerformanceSuite(object):
         suite = PerformanceSuite(dataset, pipeline_jobs, path)
         return suite
 
+"""
+class LlmJob(object):
+    def __init__(self, job_name: str, script_path: Path, conf_path: Path,
+                 loader: str, loader_conf_path: Path, tasks: typing.List[str], include_path: Path):
+        self.job_name = job_name
+        self.script_path = script_path
+        self.conf_path = conf_path
+        self.loader = loader
+        self.loader_conf_path = loader_conf_path
+        self.tasks = tasks
+        self.include_path = include_path
 
+
+class LlmPair(object):
+    def __init__(
+            self, pair_name: str, jobs: typing.List[LlmJob]
+    ):
+        self.pair_name = pair_name
+        self.jobs = jobs
+
+
+class LlmSuite(object):
+    def __init__(
+            self, pairs: typing.List[LlmPair], path: Path
+    ):
+        self.pairs = pairs
+        self.path = path
+
+    @staticmethod
+    def load(path: Path):
+        with path.open("r") as f:
+            testsuite_config = yaml.safe_load(f)
+
+        pairs = []
+        for pair_name, pair_configs in testsuite_config.items():
+            jobs = []
+            for job_name, job_configs in pair_configs.items():
+                script_path = path.parent.joinpath(job_configs["script"]).resolve()
+                if job_configs.get("conf"):
+                    conf_path = path.parent.joinpath(job_configs["conf"]).resolve()
+                else:
+                    conf_path = ""
+                loader = job_configs.get("loader", "")
+                if job_configs.get("loader_conf"):
+                    loader_conf_path = path.parent.joinpath(job_configs["loader_conf"]).resolve()
+                else:
+                    loader_conf_path = ""
+                tasks = job_configs.get("tasks", [])
+                include_path = job_configs.get("include_path", "")
+                if include_path and not os.path.isabs(include_path):
+                    include_path = path.parent.joinpath(job_configs["include_path"]).resolve()
+
+                jobs.append(
+                    LlmJob(
+                        job_name=job_name, script_path=script_path, conf_path=conf_path,
+                        loader=loader, loader_conf_path=loader_conf_path, tasks=tasks, include_path=include_path
+                    )
+                )
+
+            pairs.append(
+                LlmPair(
+                    pair_name=pair_name, jobs=jobs
+                )
+            )
+        suite = LlmSuite(pairs=pairs, path=path)
+        return suite
+
+"""
 def non_success_summary():
     status = {}
     for job in _config.non_success_jobs:
