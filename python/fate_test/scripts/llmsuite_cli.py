@@ -23,10 +23,12 @@ from inspect import signature
 import click
 import yaml
 from fate_llm.scripts.eval_cli import run_job_eval
+from fate_llm.utils.llm_evaluator import aggregate_table
 
 from fate_test._client import Clients
 from fate_test._config import Config
 from fate_test._io import LOGGER, echo
+from fate_test._parser import record_non_success_jobs, non_success_summary
 from fate_test.scripts._options import SharedOptions
 from fate_test.scripts._utils import _load_testsuites, _load_module_from_script
 from fate_test.utils import extract_job_status
@@ -50,8 +52,8 @@ from fate_test.utils import extract_job_status
               help="glob string to filter sub-directory of path specified by <include>")
 @click.option("--provider", type=str,
               help="Select the fate version, for example: fate@2.0-beta")
-@click.option('-c', '--eval-config', optional=True, type=click.Path(exists=True), help='Path to FATE Llm evaluation config. '
-                                                        'If none, use default config.')
+@click.option('--eval-config', type=click.Path(exists=True),
+              help='Path to FATE Llm evaluation config. If none, use default config.')
 @click.option('--skip-evaluate', is_flag=True, default=False,
               help="skip evaluation after training model")
 @SharedOptions.get_shared_options(hidden=True)
@@ -80,7 +82,7 @@ def run_llmsuite(ctx, include, exclude, algorithm_suite, glob, provider, task_co
     echo.echo(f"llmsuite namespace: {namespace}", fg='red')
     echo.echo("loading llmsuites:")
     if algorithm_suite:
-        #@todo: find built-in llmsuite path
+        # @todo: find built-in llmsuite path
         algorithm_suite_path = [None]
         suites = _load_testsuites(includes=algorithm_suite_path, excludes=None, glob=None, provider=provider,
                                   suffix="llmsuite.yaml", suite_type="llmsuite")
@@ -103,19 +105,17 @@ def run_llmsuite(ctx, include, exclude, algorithm_suite, glob, provider, task_co
             echo.echo(f"[{i + 1}/{len(suites)}]start at {time.strftime('%Y-%m-%d %X')} {suite.path}", fg='red')
             os.environ['enable_pipeline_job_info_callback'] = '1'
             try:
-                if eval_config:
-                    config = {}
-                    if eval_config is not None:
-                        with eval_config.open("r") as f:
-                            config.update(yaml.safe_load(f))
-                    eval_conf = config
-                else:
+                if not eval_config:
                     from fate_llm.utils.config import default_eval_config
-                    eval_conf = default_eval_config()
+                    eval_config = default_eval_config()
+
+                eval_config_dict = {}
+                with eval_config.open("r") as f:
+                    eval_config_dict.update(yaml.safe_load(f))
                 _run_llmsuite_pairs(config_inst, suite, namespace, data_namespace_mangling, client,
-                                    skip_evaluate, eval_conf)
+                                    skip_evaluate, eval_config_dict)
             except Exception as e:
-                raise RuntimeError(f"exception occur while running benchmark jobs for {suite.path}") from e
+                raise RuntimeError(f"exception occur while running llmsuite jobs for {suite.path}") from e
 
             echo.echo(f"[{i + 1}/{len(suites)}]elapse {timedelta(seconds=int(time.time() - start))}", fg='red')
         except Exception:
@@ -124,14 +124,17 @@ def run_llmsuite(ctx, include, exclude, algorithm_suite, glob, provider, task_co
             LOGGER.exception(f"exception id: {exception_id}")
         finally:
             echo.stdout_newline()
-    # non_success_summary()
+        suite_file = str(suite.path).split("/")[-1]
+        record_non_success_jobs(suite, suite_file)
+    non_success_summary()
     echo.farewell()
     echo.echo(f"llmsuite namespace: {namespace}", fg='red')
 
 
 @LOGGER.catch
 def _run_llmsuite_pairs(config: Config, suite, namespace: str,
-                        data_namespace_mangling: bool, clients: Clients, skip_evaluate: bool, eval_conf: dict):
+                        data_namespace_mangling: bool, clients: Clients, skip_evaluate: bool, eval_conf: dict,
+                        output_path: str = None):
     client = clients['guest_0']
     guest_party_id = config.parties.role_to_party("guest")[0]
     # pipeline demo goes here
@@ -150,57 +153,80 @@ def _run_llmsuite_pairs(config: Config, suite, namespace: str,
 
             def _raise(err_msg, status="failed", job_id=None, event=None, time_elapsed=None):
                 exception_id = str(uuid.uuid1())
-                # suite.update_status(job_name=job_name, job_id=job_id, exception_id=exception_id, status=status,
-                #                    event=event, time_elapsed=time_elapsed)
+                suite.update_status(job_name=job_name, job_id=job_id, exception_id=exception_id, status=status,
+                                   event=event, time_elapsed=time_elapsed)
                 echo.file(f"exception({exception_id}), error message:\n{err_msg}")
+            # evaluate_only
+            if job.evaluate_only and not skip_evaluate:
+                job_results[job.job_name] = run_job_eval(job, eval_conf)
+            # run pipeline job then evaluate
+            else:
+                job_name, script_path, conf_path = job.job_name, job.script_path, job.conf_path
+                param = Config.load_from_file(conf_path)
+                mod = _load_module_from_script(script_path)
+                input_params = signature(mod.main).parameters
 
-            job_name, script_path, conf_path = job.job_name, job.script_path, job.conf_path
-            param = Config.load_from_file(conf_path)
-            mod = _load_module_from_script(script_path)
-            input_params = signature(mod.main).parameters
+                try:
+                    # todo: add update status api to suite
+                    # pipeline should return pretrained model path
+                    pretrained_model_path = _run_mod(mod, input_params, config, param,
+                                                     namespace, data_namespace_mangling)
+                    job.pretrained_model_path = pretrained_model_path
+                    job_info = os.environ.get("pipeline_job_info")
+                    job_id, status, time_elapsed, event = extract_job_status(job_info, client, guest_party_id)
+                    suite.update_status(job_name=job_name, job_id=job_id, status=status,
+                                        time_elapsed=time_elapsed,
+                                        event=event)
 
-            try:
-                # @todo: add update status api to suite
-                _run_mod(mod, input_params, config, param, namespace, data_namespace_mangling)
-                job_info = os.environ.get("pipeline_job_info")
-                job_id, status, time_elapsed, event = extract_job_status(job_info, client, guest_party_id)
-                """suite.update_status(job_name=job_name, job_id=job_id, status=status,
-                                    time_elapsed=time_elapsed,
-                                    event=event)"""
+                except Exception as e:
+                    job_info = os.environ.get("pipeline_job_info")
+                    if job_info is None:
+                        job_id, status, time_elapsed, event = None, 'failed', None, None
+                    else:
+                        job_id, status, time_elapsed, event = extract_job_status(job_info, client,
+                                                                                 guest_party_id)
+                    _raise(e, job_id=job_id, status=status, event=event, time_elapsed=time_elapsed)
+                    os.environ.pop("pipeline_job_info")
+                    continue
                 if not skip_evaluate:
-                    # @todo: load model with flow api & record evaluate result
-                    job.pretrained_model_path, job.heft_path = None, None
-                    result = run_job_eval(job, eval_conf)
-                    job_results[job_name] = result
+                    model_task_name = "nn_0"
+                    if job.model_task_name:
+                        model_task_name = job.model_task_name
+                    peft_path = os.path.join(config.fate_base, "fate_flow", "model", job_id,
+                                             "guest", guest_party_id, model_task_name,
+                                             "0", "output", "output_model", "model_directory")
+                    job.peft_path = peft_path
+                    try:
+                        result = run_job_eval(job, eval_conf)
+                        job_results[job_name] = result
+                    except Exception as e:
+                        _raise(f"evaluate failed: {e}")
                 os.environ.pop("pipeline_job_info")
-
-            except Exception as e:
-                job_info = os.environ.get("pipeline_job_info")
-                if job_info is None:
-                    job_id, status, time_elapsed, event = None, 'failed', None, None
-                else:
-                    job_id, status, time_elapsed, event = extract_job_status(job_info, client,
-                                                                             guest_party_id)
-                _raise(e, job_id=job_id, status=status, event=event, time_elapsed=time_elapsed)
-                os.environ.pop("pipeline_job_info")
-                continue
         suite_results[pair.pair_name] = job_results
-        for job_name, result in job_results.items():
-            echo.echo(f"Job: {job_name}")
-            echo.echo(result)
-        # todo: record time elapse
+    suite_writers = aggregate_table(suite_results)
+    for pair_name, pair_writer in suite_writers.items():
+        echo.sep_line()
+        echo.echo(f"Pair: {pair_name}")
+        echo.sep_line()
+        echo.echo(pair_writer.dumps())
+        echo.stdout_newline()
+
+    if output_path:
+        with open(output_path, 'w') as f:
+            for pair_name, pair_writer in suite_writers.items():
+                pair_writer.dumps(f)
 
 
 def _run_mod(mod, input_params, config, param, namespace, data_namespace_mangling):
     if len(input_params) == 1:
-        mod.main(param=param)
+        return mod.main(param=param)
     elif len(input_params) == 2:
-        mod.main(config=config, param=param)
+        return mod.main(config=config, param=param)
     # pipeline script
     elif len(input_params) == 3:
         if data_namespace_mangling:
-            mod.main(config=config, param=param, namespace=f"_{namespace}")
+            return mod.main(config=config, param=param, namespace=f"_{namespace}")
         else:
-            mod.main(config=config, param=param)
+            return mod.main(config=config, param=param)
     else:
-        mod.main()
+        return mod.main()
