@@ -6,7 +6,6 @@ import uuid
 from pathlib import Path
 
 import click
-from fate_llm.utils import LlmSuite
 
 from fate_test._client import Clients
 from fate_test._config import Config
@@ -88,6 +87,7 @@ def _load_testsuites(includes, excludes, glob, provider=None, suffix="testsuite.
             elif suite_type == "performance":
                 suite = PerformanceSuite.load(suite_path.resolve())
             elif suite_type == "llmsuite":
+                from fate_llm.evaluate.utils import LlmSuite
                 suite = LlmSuite.load(suite_path.resolve())
                 suite_status = {}
                 for pair in suite.pairs:
