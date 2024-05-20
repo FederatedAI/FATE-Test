@@ -22,8 +22,8 @@ from inspect import signature
 
 import click
 import yaml
-from fate_llm.scripts.eval_cli import run_job_eval
-from fate_llm.utils.llm_evaluator import aggregate_table
+from fate_llm.evaluate.scripts.eval_cli import run_job_eval
+from fate_llm.evaluate.utils.llm_evaluator import aggregate_table
 
 from fate_test._client import Clients
 from fate_test._config import Config
@@ -106,7 +106,7 @@ def run_llmsuite(ctx, include, exclude, algorithm_suite, glob, provider, task_co
             os.environ['enable_pipeline_job_info_callback'] = '1'
             try:
                 if not eval_config:
-                    from fate_llm.utils.config import default_eval_config
+                    from fate_llm.evaluate.utils.config import default_eval_config
                     eval_config = default_eval_config()
 
                 eval_config_dict = {}
