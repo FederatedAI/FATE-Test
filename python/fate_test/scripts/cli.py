@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 #
+import os
 
 import click
 
@@ -20,7 +21,6 @@ from fate_test.scripts._options import SharedOptions
 from fate_test.scripts.benchmark_cli import run_benchmark
 from fate_test.scripts.config_cli import config_group
 from fate_test.scripts.data_cli import data_group
-from fate_test.scripts.llmsuite_cli import run_llmsuite
 # from fate_test.scripts.flow_test_cli import flow_group
 from fate_test.scripts.performance_cli import run_task
 # from fate_test.scripts.quick_test_cli import unittest_group
@@ -33,9 +33,13 @@ commands = {
     "performance": run_task,
     "benchmark-quality": run_benchmark,
     "data": data_group,
-    "llmsuite": run_llmsuite
+
     # "unittest": unittest_group
 }
+
+if os.environ.get("INCLUDE_FATE_LLM", None):
+    from fate_test.scripts.llmsuite_cli import run_llmsuite
+    commands["llmsuite"] = run_llmsuite
 
 commands_alias = {
     "bq": "benchmark-quality",
