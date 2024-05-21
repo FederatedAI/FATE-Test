@@ -194,7 +194,7 @@ def _run_llmsuite_pairs(config: Config, suite, namespace: str,
                     from lm_eval.utils import apply_template
                     peft_path = apply_template(job.peft_path_format,
                                                {"fate_base": config.fate_base,
-                                                "job_id": job_id,
+                                                "job_id": job_id[0],
                                                 "party_id": guest_party_id,
                                                 "model_task_name": model_task_name}
                                                )
