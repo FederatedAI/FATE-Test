@@ -152,7 +152,7 @@ def _run_llmsuite_pairs(config: Config, suite, namespace: str,
 
             def _raise(err_msg, status="failed", job_id=None, event=None, time_elapsed=None):
                 exception_id = str(uuid.uuid1())
-                suite.update_status(job_name=job_name, job_id=job_id, exception_id=exception_id, status=status,
+                suite.update_status(pair_name=pair.pair_name, job_name=job_name, job_id=job_id, exception_id=exception_id, status=status,
                                    event=event, time_elapsed=time_elapsed)
                 echo.file(f"exception({exception_id}), error message:\n{err_msg}")
             # evaluate_only
@@ -173,7 +173,7 @@ def _run_llmsuite_pairs(config: Config, suite, namespace: str,
                     job.pretrained_model_path = pretrained_model_path
                     job_info = os.environ.get("pipeline_job_info")
                     job_id, status, time_elapsed, event = extract_job_status(job_info, client, guest_party_id)
-                    suite.update_status(job_name=job_name, job_id=job_id, status=status,
+                    suite.update_status(pair_name=pair.pair_name, job_name=job_name, job_id=job_id, status=status,
                                         time_elapsed=time_elapsed,
                                         event=event)
 
