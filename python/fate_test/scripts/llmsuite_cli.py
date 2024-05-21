@@ -22,8 +22,6 @@ from inspect import signature
 
 import click
 import yaml
-from fate_llm.evaluate.scripts.eval_cli import run_job_eval
-from fate_llm.evaluate.utils.llm_evaluator import aggregate_table
 
 from fate_test._client import Clients
 from fate_test._config import Config
@@ -135,6 +133,7 @@ def run_llmsuite(ctx, include, exclude, algorithm_suite, glob, provider, task_co
 def _run_llmsuite_pairs(config: Config, suite, namespace: str,
                         data_namespace_mangling: bool, clients: Clients, skip_evaluate: bool, eval_conf: dict,
                         output_path: str = None):
+    from fate_llm.evaluate.scripts.eval_cli import run_job_eval
     client = clients['guest_0']
     guest_party_id = config.parties.role_to_party("guest")[0]
     # pipeline demo goes here
@@ -192,9 +191,16 @@ def _run_llmsuite_pairs(config: Config, suite, namespace: str,
                     model_task_name = "nn_0"
                     if job.model_task_name:
                         model_task_name = job.model_task_name
-                    peft_path = os.path.join(config.fate_base, "fate_flow", "model", job_id,
+                    from lm_eval.utils import apply_template
+                    peft_path = apply_template(job.peft_path_format,
+                                               {"fate_base": config.fate_base,
+                                                "job_id": job_id,
+                                                "party_id": guest_party_id,
+                                                "model_task_name": model_task_name}
+                                               )
+                    """peft_path = os.path.join(config.fate_base, "fate_flow", "model", job_id,
                                              "guest", guest_party_id, model_task_name,
-                                             "0", "output", "output_model", "model_directory")
+                                             "0", "output", "output_model", "model_directory")"""
                     job.peft_path = peft_path
                     try:
                         result = run_job_eval(job, eval_conf)
@@ -203,6 +209,8 @@ def _run_llmsuite_pairs(config: Config, suite, namespace: str,
                         _raise(f"evaluate failed: {e}")
                 os.environ.pop("pipeline_job_info")
         suite_results[pair.pair_name] = job_results
+
+    from fate_llm.evaluate.utils.llm_evaluator import aggregate_table
     suite_writers = aggregate_table(suite_results)
     for pair_name, pair_writer in suite_writers.items():
         echo.sep_line()
