@@ -89,3 +89,15 @@ shown in last step
   fate_test data generate -i <path contains *performance.yaml> -ng 10000 -fg 10 -fh 10 -m 1.0 --upload-data
   fate_test performance -i <path contains *performance.yaml> --skip-data
   ```
+
+- [llm-suite](./fate_test_command.md#fate-llmsuite): used for running FATE-Llm testsuites, collection of FATE-Llm jobs and/or evaluations
+  
+  Before running llmsuite for the first time, make sure to install FATE-Llm and allow its import in FATE-Test scripts:
+
+  ```bash
+  fate_test config include fate-llm
+  ```
+
+  ```bash
+  fate_test llmsuite -i <path contains *llmsuite.yaml>
+  ```

@@ -867,3 +867,154 @@ fate_test data --help
     data after generate and upload dataset in testsuites
     *path1*
 
+
+## FATE Llmsuite
+
+FATE Llmsuite is used for running a collection of FATE-Llm jobs in sequence and then evaluate them on user-specified tasks.
+It also allows users to compare the results of different llm jobs.
+
+### command options
+
+```bash
+fate_test llmsuite --help
+```
+
+1. include:
+
+   ```bash
+   fate_test llmsuite -i <path1 contains *llmsuite.yaml>
+   ```
+
+   will run llm testsuites in
+   *path1*
+
+2. exclude:
+
+   ```bash
+   fate_test llmsuite -i <path1 contains *llmsuite.yaml> -e <path2 to exclude> -e <path3 to exclude> ...
+   ```
+
+   will run llm testsuites in *path1* but not in *path2* and *path3*
+
+3. glob:
+
+   ```bash
+   fate_test llmsuite -i <path1 contains *llmsuite.yaml> -g "hetero*"
+   ```
+
+   will run llm testsuites in sub directory start with *hetero* of
+   *path1*
+
+4. algorithm-suite:
+
+   ```bash
+   fate_test llmsuite -a pellm'
+   ```
+
+   will run built-in 'pellm' llm testsuite, which will train and evaluate a FATE-Llm model and a zero-shot model
+
+5. timeout:
+
+   ```bash
+   fate_test llmsuite -i <path1 contains *llmsuite.yaml> -m 3600
+   ```
+
+   will run llm testsuites in *path1* and timeout when job does not finish
+   within 3600s; if tasks need more time, use a larger threshold
+
+6. task-cores
+
+   ```bash
+   fate_test llmsuite -i <path1 contains *llmsuite.yaml> -p 4
+   ```
+
+   will run llm testsuites in *path1* with script config "task-cores" set to 4
+
+7. eval-config:
+
+    ```bash
+    fate_test llmsuite -i <path1 contains *llmsuite.yaml> --eval-config <path2>
+    ```
+
+   will run llm testsuites in *path1* with evaluation configuration set to *path2*
+
+8. skip-evaluate:
+
+    ```bash
+    fate_test llmsuite -i <path1 contains *llmsuite.yaml> --skip-evaluate
+    ```
+
+    will run llm testsuites in *path1* without running evaluation
+
+9. provider:
+
+    ```bash
+    fate_test llmsuite -i <path1 contains *llmsuite.yaml> --provider <provider_name>
+    ```
+
+    will run llm testsuites in *path1* with FATE provider set to *provider_name*
+
+10. yes:
+
+    ```bash
+    fate_test llmsuite -i <path1 contains *llmsuite.yaml> --yes
+    ```
+
+    will run llm testsuites in *path1* directly, skipping double check
+
+
+### FATE-Llm job configuration
+
+Configuration of jobs should be specified in a llm testsuite whose
+file name ends with "\*llmsuite.yaml". For llm testsuite example,
+please refer [here](https://github.com/FederatedAI/FATE-LLM).
+
+A FATE-Llm testsuite includes the following elements:
+
+- job group: each group includes arbitrary number of jobs with paths
+  to corresponding script and configuration
+
+    - job: name of evaluation job to be run, must be unique within each group
+      list
+
+        - script: path to [testing script](#testing-script), should be
+          relative to testsuite, optional for evaluation-only jobs
+        - conf: path to job configuration file for script, should be
+          relative to testsuite, optional for evaluation-only jobs
+        - pretrained: path to pretrained model, should be relative to
+          testsuite, optional for jobs needed to run FATE-Llm training job, where the 
+          script should return path to the pretrained model
+        - peft: path to peft file, should be relative to testsuite, 
+          optional for jobs needed to run FATE-Llm training job
+        - tasks: list of tasks to be evaluated, optional for jobs skipping evaluation
+        - include_path: should be specified if tasks are user-defined
+        - eval_conf: path to evaluation configuration file, should be
+          relative to testsuite; if not provided, will use default conf
+
+      ```yaml
+          bloom_lora:
+            pretrained: "/data/cephfs/llm/models/bloom-560m"
+            script: "./test_bloom_lora.py"
+            conf: "./bloom_lora_config.yaml"
+            peft_path_format: "{{fate_base}}/fate_flow/model/{{job_id}}/guest/{{party_id}}/{{model_task_name}}/0/output/output_model/model_directory"
+            tasks:
+              - "dolly-15k"
+
+      ```
+
+    -
+
+  ```yaml
+     hetero_nn_sshe_binary_0:
+      bloom_lora: 
+        pretrained: "/data/cephfs/llm/models/bloom-560m"
+        script: "./test_bloom_lora.py"
+        conf: "./bloom_lora_config.yaml"
+        peft_path_format: "{{fate_base}}/fate_flow/model/{{job_id}}/guest/{{party_id}}/{{model_task_name}}/0/output/output_model/model_directory"
+        tasks:
+          - "dolly-15k"
+      bloom_zero_shot:
+        pretrained: "/data/cephfs/llm/models/bloom-560m"
+        tasks:
+          - "dolly-15k"
+  ```
