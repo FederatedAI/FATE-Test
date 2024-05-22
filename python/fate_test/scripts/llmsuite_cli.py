@@ -95,7 +95,8 @@ def run_llmsuite(ctx, include, exclude, algorithm_suite, glob, provider, task_co
     echo.stdout_newline()
     # with Clients(config_inst) as client:
     client = Clients(config_inst)
-
+    from fate_llm.evaluate.utils import llm_evaluator
+    llm_evaluator.init_tasks()
     for i, suite in enumerate(suites):
         # noinspection PyBroadException
         try:
