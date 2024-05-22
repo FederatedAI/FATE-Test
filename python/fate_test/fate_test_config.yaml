@@ -19,7 +19,7 @@ all_examples_data_config: examples/data/upload_config/all_examples_data_testsuit
 
 # directory where FATE code locates, default installation location={FATE}/fate
 # python/ml -> $fate_base/python/ml
-fate_base: path(FATE)/fate
+fate_base: path(FATE)/
 
 # whether to delete data in suites after all jobs done
 clean_data: true

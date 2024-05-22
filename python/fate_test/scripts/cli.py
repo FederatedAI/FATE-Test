@@ -13,7 +13,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 #
-import os
 
 import click
 
@@ -37,7 +36,8 @@ commands = {
     # "unittest": unittest_group
 }
 
-if os.environ.get("INCLUDE_FATE_LLM", None):
+from fate_test import utils
+if utils.INCLUDE_FATE_LLM:
     from fate_test.scripts.llmsuite_cli import run_llmsuite
     commands["llmsuite"] = run_llmsuite
 

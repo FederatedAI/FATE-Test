@@ -13,11 +13,11 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 #
-import os
 from pathlib import Path
 
 import click
 
+from fate_test import utils
 from fate_test._client import Clients
 from fate_test._config import create_config, default_config, parse_config
 from fate_test.scripts._options import SharedOptions
@@ -89,5 +89,5 @@ def _enable(include):
     """
     for p in include:
         if isinstance(p, str) and p.lower() == "fate-llm":
-            os.environ['INCLUDE_FATE_LLM'] = "1"
+            utils.INCLUDE_FATE_LLM = '1'
     click.echo(f"FATE-Test will allow import {include}.")
