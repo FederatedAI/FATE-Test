@@ -80,9 +80,15 @@ def run_llmsuite(ctx, include, exclude, algorithm_suite, glob, provider, task_co
     echo.echo(f"llmsuite namespace: {namespace}", fg='red')
     echo.echo("loading llmsuites:")
     if algorithm_suite:
-        # @todo: find built-in llmsuite path
-        algorithm_suite_path = [None]
-        suites = _load_testsuites(includes=algorithm_suite_path, excludes=None, glob=None, provider=provider,
+        algorithm_suite_path_dict = {"pellm": os.path.join(ctx.obj.get("fate_base"), "fate_llm", "examples")}
+        suite_paths = []
+        for alg in algorithm_suite:
+            algorithm_suite_path = algorithm_suite_path_dict.get(alg, None)
+            if algorithm_suite_path is None:
+                echo.echo(f"algorithm suite {alg} not found", fg='red')
+            else:
+                suite_paths.append(algorithm_suite_path)
+        suites = _load_testsuites(includes=suite_paths, excludes=None, glob=None, provider=provider,
                                   suffix="llmsuite.yaml", suite_type="llmsuite")
     else:
         suites = _load_testsuites(includes=include, excludes=exclude, glob=glob, provider=provider,
@@ -137,7 +143,6 @@ def _run_llmsuite_pairs(config: Config, suite, namespace: str,
     from fate_llm.evaluate.scripts.eval_cli import run_job_eval
     client = clients['guest_0']
     guest_party_id = config.parties.role_to_party("guest")[0]
-    # pipeline demo goes here
     pair_n = len(suite.pairs)
     # fate_base = config.fate_base
     # PYTHONPATH = os.environ.get('PYTHONPATH') + ":" + os.path.join(fate_base, "python")
@@ -167,14 +172,14 @@ def _run_llmsuite_pairs(config: Config, suite, namespace: str,
                 input_params = signature(mod.main).parameters
 
                 try:
-                    # todo: add update status api to suite
                     # pipeline should return pretrained model path
                     pretrained_model_path = _run_mod(mod, input_params, config, param,
                                                      namespace, data_namespace_mangling)
                     job.pretrained_model_path = pretrained_model_path
                     job_info = os.environ.get("pipeline_job_info")
                     job_id, status, time_elapsed, event = extract_job_status(job_info, client, guest_party_id)
-                    suite.update_status(pair_name=pair.pair_name, job_name=job_name, job_id=job_id, status=status,
+                    suite.update_status(pair_name=pair.pair_name, job_name=job_name,
+                                        job_id=job_id, status=status,
                                         time_elapsed=time_elapsed,
                                         event=event)
 
@@ -183,8 +188,7 @@ def _run_llmsuite_pairs(config: Config, suite, namespace: str,
                     if job_info is None:
                         job_id, status, time_elapsed, event = None, 'failed', None, None
                     else:
-                        job_id, status, time_elapsed, event = extract_job_status(job_info, client,
-                                                                                 guest_party_id)
+                        job_id, status, time_elapsed, event = extract_job_status(job_info, client, guest_party_id)
                     _raise(e, job_id=job_id, status=status, event=event, time_elapsed=time_elapsed)
                     os.environ.pop("pipeline_job_info")
                     continue
