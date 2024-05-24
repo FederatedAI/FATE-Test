@@ -978,10 +978,11 @@ A FATE-Llm testsuite includes the following elements:
       list
 
         - script: path to [testing script](#testing-script), should be
-          relative to testsuite, optional for evaluation-only jobs
+          relative to testsuite, optional for evaluation-only jobs;
+          note that pretrained model, if available, should be returned at the end of the script
         - conf: path to job configuration file for script, should be
           relative to testsuite, optional for evaluation-only jobs
-        - pretrained: path to pretrained model, should be relative to
+        - pretrained: path to pretrained model, should be either model name from Huggingface or relative path to
           testsuite, optional for jobs needed to run FATE-Llm training job, where the 
           script should return path to the pretrained model
         - peft: path to peft file, should be relative to testsuite, 
@@ -993,7 +994,7 @@ A FATE-Llm testsuite includes the following elements:
 
       ```yaml
           bloom_lora:
-            pretrained: "/data/cephfs/llm/models/bloom-560m"
+            pretrained: "models/bloom-560m"
             script: "./test_bloom_lora.py"
             conf: "./bloom_lora_config.yaml"
             peft_path_format: "{{fate_base}}/fate_flow/model/{{job_id}}/guest/{{party_id}}/{{model_task_name}}/0/output/output_model/model_directory"
@@ -1007,14 +1008,14 @@ A FATE-Llm testsuite includes the following elements:
   ```yaml
      hetero_nn_sshe_binary_0:
       bloom_lora: 
-        pretrained: "/data/cephfs/llm/models/bloom-560m"
+        pretrained: "bloom-560m"
         script: "./test_bloom_lora.py"
         conf: "./bloom_lora_config.yaml"
         peft_path_format: "{{fate_base}}/fate_flow/model/{{job_id}}/guest/{{party_id}}/{{model_task_name}}/0/output/output_model/model_directory"
         tasks:
           - "dolly-15k"
       bloom_zero_shot:
-        pretrained: "/data/cephfs/llm/models/bloom-560m"
+        pretrained: "bloom-560m"
         tasks:
           - "dolly-15k"
   ```
