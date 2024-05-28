@@ -908,7 +908,7 @@ fate_test llmsuite --help
 4. algorithm-suite:
 
    ```bash
-   fate_test llmsuite -a pellm'
+   fate_test llmsuite -a "pellm"
    ```
 
    will run built-in 'pellm' llm testsuite, which will train and evaluate a FATE-Llm model and a zero-shot model
