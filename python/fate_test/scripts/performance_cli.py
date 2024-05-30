@@ -54,7 +54,7 @@ from fate_test.utils import TxtStyle, parse_job_time_info, pretty_time_info_summ
 @click.option("--disable-clean-data", "clean_data", flag_value=False, default=None)
 @SharedOptions.get_shared_options(hidden=True)
 @click.pass_context
-def run_task(ctx, job_type, include, timeout, epochs,
+def run_performance(ctx, job_type, include, timeout, epochs,
              max_depth, num_trees, task_cores, storage_tag, history_tag, skip_data, clean_data, **kwargs):
     """
     Test the performance of big data tasks, alias: bp

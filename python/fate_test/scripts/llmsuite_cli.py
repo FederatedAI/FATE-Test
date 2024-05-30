@@ -31,10 +31,7 @@ from fate_test.scripts._options import SharedOptions
 from fate_test.scripts._utils import _load_testsuites, _load_module_from_script
 from fate_test.utils import extract_job_status
 
-"""
-@click.option('-uj', '--update-job-parameters', default="{}", type=str,
-              help="a json string that represents mapping for replacing fields in job conf, example format: "'{job_name: param_name1: param_val1, param_name2=param_val2}'")
-"""
+
 @click.command("llmsuite")
 @click.option('-i', '--include', required=True, type=click.Path(exists=True), multiple=True,
               metavar="<include>",
@@ -101,6 +98,7 @@ def run_llmsuite(ctx, include, exclude, algorithm_suite, glob, provider, task_co
     echo.stdout_newline()
     # with Clients(config_inst) as client:
     client = Clients(config_inst)
+    print(f"\n called import llm evaluator\n")
     from fate_llm.evaluate.utils import llm_evaluator
     llm_evaluator.init_tasks()
     for i, suite in enumerate(suites):

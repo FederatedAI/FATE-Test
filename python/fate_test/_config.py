@@ -49,7 +49,7 @@ fate_base: path(FATE)/
 # whether to delete data in suites after all jobs done
 clean_data: true
 
-# participating parties' id and correponding flow service ip & port information
+# participating parties' id and corresponding flow service ip & port information
 parties:
   guest: ['9999']
   host: ['10000', '9999']
