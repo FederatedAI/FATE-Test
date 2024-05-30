@@ -30,17 +30,6 @@ class MultiCLI(click.MultiCommand):
     def __init__(self, *args, **kwargs):
         super(MultiCLI, self).__init__(*args, **kwargs)
         self.plugin_folder = os.path.dirname(__file__)
-        """self._commands =  {
-            "config": config_group,
-            "suite": run_suite,
-            "performance": run_task,
-            "benchmark-quality": run_benchmark,
-            "data": data_group}
-        self._load_extra_commands()
-        
-    def _load_extra_commands(self):
-        from fate_test.scripts.llmsuite_cli import run_llmsuite
-        self._commands["llmsuite"] = run_llmsuite"""
 
     def list_commands(self, ctx):
         rv = []
@@ -48,7 +37,6 @@ class MultiCLI(click.MultiCommand):
             if filename.endswith("_cli.py"):
                 rv.append(filename[:-7])
         rv.sort()
-        print(f"rv: {rv}")
         return rv
 
     def get_command(self, ctx, name):

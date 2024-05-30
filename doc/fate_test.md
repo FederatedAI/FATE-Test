@@ -90,7 +90,7 @@ shown in last step
   fate_test performance -i <path contains *performance.yaml> --skip-data
   ```
 
-- [llm-suite](./fate_test_command.md#fate-llmsuite): used for running FATE-Llm testsuites, collection of FATE-Llm jobs and/or evaluations
+- [llm-suite](./fate_test_command.md#llmsuite): used for running FATE-Llm testsuites, collection of FATE-Llm jobs and/or evaluations
   
   Before running llmsuite for the first time, make sure to install FATE-Llm and allow its import in FATE-Test scripts:
 

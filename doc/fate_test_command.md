@@ -868,9 +868,9 @@ fate_test data --help
     *path1*
 
 
-## FATE Llmsuite
+## Llmsuite
 
-FATE Llmsuite is used for running a collection of FATE-Llm jobs in sequence and then evaluate them on user-specified tasks.
+Llmsuite is used for running a collection of FATE-Llm jobs in sequence and then evaluate them on user-specified tasks.
 It also allows users to compare the results of different llm jobs.
 
 ### command options

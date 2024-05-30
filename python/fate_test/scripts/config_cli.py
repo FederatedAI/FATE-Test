@@ -17,7 +17,6 @@ from pathlib import Path
 
 import click
 
-from fate_test import utils
 from fate_test._client import Clients
 from fate_test._config import create_config, default_config, parse_config
 from fate_test.scripts._options import SharedOptions
@@ -80,14 +79,16 @@ def _config(ctx, **kwargs):
                 click.echo(f"[✓]connection {address} ok, fate version is {version}, role is {r}")
 
 
-@config_group.command(name="enable")
-@click.option('-i', '--include', required=True, type=str, multiple=True,
-              help="packages to be loaded in FATE-Test scripts")
-def _enable(include):
-    """
-    allow import of extra packages, currently only for FATE-Llm
-    """
-    for p in include:
-        if isinstance(p, str) and p.lower() == "fate-llm":
-            utils.INCLUDE_FATE_LLM = '1'
-    click.echo(f"FATE-Test will allow import {include}.")
+"""@config_group.command(name="set-extra-command")
+@SharedOptions.get_shared_options(hidden=True)
+@click.argument('enable', required=True, type=click.BOOL)
+@click.pass_context
+def _enable(ctx, enable, **kwargs):
+"""
+"""
+    allow extra commands, currently only FATE-Llm
+    
+    ctx.obj.update(**kwargs)
+    ctx.obj.update(include_fate_llm=enable)
+    os.environ["INCLUDE_FATE_LLM"] = '1' if enable else '0'
+    click.echo(f"Extra command {'enabled' if enable else 'disabled'}.")"""
