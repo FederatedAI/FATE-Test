@@ -21,7 +21,6 @@ from datetime import timedelta
 from inspect import signature
 
 import click
-import yaml
 
 from fate_test._client import Clients
 from fate_test._config import Config
@@ -107,15 +106,21 @@ def run_llmsuite(ctx, include, exclude, algorithm_suite, glob, provider, task_co
             echo.echo(f"[{i + 1}/{len(suites)}]start at {time.strftime('%Y-%m-%d %X')} {suite.path}", fg='red')
             os.environ['enable_pipeline_job_info_callback'] = '1'
             try:
+                # eval_config_dict = {}
                 if not eval_config:
                     from fate_llm.evaluate.utils.config import default_eval_config
                     eval_config = default_eval_config()
+                    if not os.path.exists(eval_config):
+                        """eval_config = os.path.abspath(eval_config)
+                        eval_config_dict = {}
+                        with eval_config.open("r") as f:
+                            eval_config_dict.update(yaml.safe_load(f))"""
+                        eval_config = None
 
-                eval_config_dict = {}
-                with eval_config.open("r") as f:
-                    eval_config_dict.update(yaml.safe_load(f))
+                """_run_llmsuite_pairs(config_inst, suite, namespace, data_namespace_mangling, client,
+                                    skip_evaluate, eval_config_dict)"""
                 _run_llmsuite_pairs(config_inst, suite, namespace, data_namespace_mangling, client,
-                                    skip_evaluate, eval_config_dict)
+                                    skip_evaluate, eval_config)
             except Exception as e:
                 raise RuntimeError(f"exception occur while running llmsuite jobs for {suite.path}") from e
 
@@ -135,7 +140,7 @@ def run_llmsuite(ctx, include, exclude, algorithm_suite, glob, provider, task_co
 
 @LOGGER.catch
 def _run_llmsuite_pairs(config: Config, suite, namespace: str,
-                        data_namespace_mangling: bool, clients: Clients, skip_evaluate: bool, eval_conf: dict,
+                        data_namespace_mangling: bool, clients: Clients, skip_evaluate: bool, eval_conf: str,
                         output_path: str = None):
     from fate_llm.evaluate.scripts.eval_cli import run_job_eval
     client = clients['guest_0']
