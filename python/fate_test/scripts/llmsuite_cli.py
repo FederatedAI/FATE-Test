@@ -90,7 +90,7 @@ def run_llmsuite(ctx, include, exclude, algorithm_suite, glob, provider, task_co
         suites = _load_testsuites(includes=include, excludes=exclude, glob=glob, provider=provider,
                                   suffix="llmsuite.yaml", suite_type="llmsuite")
     for suite in suites:
-        echo.echo(f"\tllm groups({len(suite.pairs)}) {suite.path}")
+        echo.echo(f"\tllm suite count: ({len(suite.pairs)}) from {suite.path}")
     if not yes and not click.confirm("running?"):
         return
 
@@ -165,6 +165,7 @@ def _run_llmsuite_pairs(config: Config, suite, namespace: str,
                 echo.file(f"exception({exception_id}), error message:\n{err_msg}")
             # evaluate_only
             if job.evaluate_only and not skip_evaluate:
+                echo.echo(f"Evaluating job: {job.job_name} with tasks: {job.tasks}")
                 job_results[job.job_name] = run_job_eval(job, eval_conf)
             # run pipeline job then evaluate
             else:
@@ -209,6 +210,7 @@ def _run_llmsuite_pairs(config: Config, suite, namespace: str,
                                              "guest", guest_party_id, model_task_name,
                                              "0", "output", "output_model", "model_directory")"""
                     job.peft_path = peft_path
+                    echo.echo(f"Evaluating job: {job.job_name} with tasks: {job.tasks}")
                     try:
                         result = run_job_eval(job, eval_conf)
                         job_results[job_name] = result
