@@ -111,14 +111,7 @@ def run_llmsuite(ctx, include, exclude, algorithm_suite, glob, provider, task_co
                     from fate_llm.evaluate.utils.config import default_eval_config
                     eval_config = default_eval_config()
                     if not os.path.exists(eval_config):
-                        """eval_config = os.path.abspath(eval_config)
-                        eval_config_dict = {}
-                        with eval_config.open("r") as f:
-                            eval_config_dict.update(yaml.safe_load(f))"""
                         eval_config = None
-
-                """_run_llmsuite_pairs(config_inst, suite, namespace, data_namespace_mangling, client,
-                                    skip_evaluate, eval_config_dict)"""
                 _run_llmsuite_pairs(config_inst, suite, namespace, data_namespace_mangling, client,
                                     skip_evaluate, eval_config)
             except Exception as e:
@@ -206,9 +199,6 @@ def _run_llmsuite_pairs(config: Config, suite, namespace: str,
                                                 "party_id": guest_party_id,
                                                 "model_task_name": model_task_name}
                                                )
-                    """peft_path = os.path.join(config.fate_base, "fate_flow", "model", job_id,
-                                             "guest", guest_party_id, model_task_name,
-                                             "0", "output", "output_model", "model_directory")"""
                     job.peft_path = peft_path
                     echo.echo(f"Evaluating job: {job.job_name} with tasks: {job.tasks}")
                     try:

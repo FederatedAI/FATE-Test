@@ -70,8 +70,6 @@ def run_suite(ctx, include, exclude, glob,
     if timeout is not None:
         config_inst.update_conf(timeout=timeout)
 
-    """if ctx.obj["auto_increasing_sid"] is not None:
-        config_inst.auto_increasing_sid = ctx.obj["auto_increasing_sid"]"""
     if clean_data is None:
         clean_data = config_inst.clean_data
     namespace = ctx.obj["namespace"]
