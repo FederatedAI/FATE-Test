@@ -32,7 +32,7 @@ from fate_test.utils import extract_job_status
 
 
 @click.command("llmsuite")
-@click.option('-i', '--include', required=True, type=click.Path(exists=True), multiple=True,
+@click.option('-i', '--include', required=False, type=click.Path(exists=True), multiple=True,
               metavar="<include>",
               help="include *llmsuite.yaml under these paths")
 @click.option('-e', '--exclude', type=click.Path(exists=True), multiple=True,
@@ -76,7 +76,8 @@ def run_llmsuite(ctx, include, exclude, algorithm_suite, glob, provider, task_co
     echo.echo(f"llmsuite namespace: {namespace}", fg='red')
     echo.echo("loading llmsuites:")
     if algorithm_suite:
-        algorithm_suite_path_dict = {"pellm": os.path.join(ctx.obj.get("fate_base"), "fate_llm", "examples")}
+        algorithm_suite_path_dict = {"pellm": os.path.join(config_inst.fate_base, "fate_llm", "examples", "pellm")}
+        # algorithm_suite_path_dict = {"pellm": os.path.join(config_inst.fate_base,"examples", "pellm")}
         suite_paths = []
         for alg in algorithm_suite:
             algorithm_suite_path = algorithm_suite_path_dict.get(alg, None)
@@ -84,14 +85,16 @@ def run_llmsuite(ctx, include, exclude, algorithm_suite, glob, provider, task_co
                 echo.echo(f"algorithm suite {alg} not found", fg='red')
             else:
                 suite_paths.append(algorithm_suite_path)
-        suites = _load_testsuites(includes=suite_paths, excludes=None, glob=None, provider=provider,
+        suites = _load_testsuites(includes=suite_paths, excludes=[], glob=None, provider=provider,
                                   suffix="llmsuite.yaml", suite_type="llmsuite")
-    else:
+    elif len(include) > 0:
         suites = _load_testsuites(includes=include, excludes=exclude, glob=glob, provider=provider,
                                   suffix="llmsuite.yaml", suite_type="llmsuite")
-    for suite in suites:
-        echo.echo(f"\tllm suite count: ({len(suite.pairs)}) from {suite.path}")
-    if not yes and not click.confirm("running?"):
+        for suite in suites:
+            echo.echo(f"\tllm suite count: ({len(suite.pairs)}) from {suite.path}")
+        if not yes and not click.confirm("running?"):
+            return
+    else:
         return
 
     echo.stdout_newline()
