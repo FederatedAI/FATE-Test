@@ -94,7 +94,7 @@ def _load_testsuites(includes, excludes, glob, provider=None, suffix="testsuite.
                 with suite_path.resolve().open("r") as f:
                     suite_config = yaml.safe_load(f)
                 dataset = []
-                for d in suite_config.get("data"):
+                for d in suite_config.get("data", {}):
                     d = DATA_LOAD_HOOK.hook(d)
                     dataset.append(Data.load(d, suite_path, for_upload=False))
                 suite.dataset = dataset
@@ -116,6 +116,8 @@ def _load_testsuites(includes, excludes, glob, provider=None, suffix="testsuite.
 
 @LOGGER.catch
 def _bind_data(clients: Clients, suite, config: Config):
+    if not suite.dataset:
+        return
     with click.progressbar(length=len(suite.dataset),
                            label="dataset",
                            show_eta=False,
