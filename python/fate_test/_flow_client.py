@@ -48,7 +48,7 @@ class FLOWClient(object):
         if not path.exists():
             raise Exception('The file is obtained from the fate flow client machine, but it does not exist, '
                             f'please check the path: {path}')
-        response = self._client.table.bind_path(file=str(path),
+        response = self._client.table.bind_path(path=str(path),
                                                 namespace=data.namespace,
                                                 name=data.table_name)
         try:
