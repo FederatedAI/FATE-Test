@@ -19,7 +19,6 @@ import typing
 from pathlib import Path
 
 import prettytable
-# import json
 from ruamel import yaml
 
 from fate_test import _config
@@ -62,19 +61,20 @@ DSL_LOAD_HOOK = chain_hook()
 
 
 class Data(object):
-    def __init__(self, config: dict, role_str: str):
+    def __init__(self, config: dict, role_str: str, for_upload=True):
         self.config = config
         self.file = config.get("file", "")
-        self.meta = config.get("meta", {})
-        self.partitions = config.get("partitions", 4)
-        self.head = config.get("head", True)
-        self.extend_sid = config.get("extend_sid", True)
         self.namespace = config.get("namespace", "")
         self.table_name = config.get("table_name", "")
         self.role_str = role_str
+        if for_upload:
+            self.meta = config.get("meta", {})
+            self.partitions = config.get("partitions", 4)
+            self.head = config.get("head", True)
+            self.extend_sid = config.get("extend_sid", True)
 
     @staticmethod
-    def load(config, path: Path):
+    def load(config, path: Path, for_upload=True):
         kwargs = {}
         for field_name in config.keys():
             if field_name not in ["file", "role"]:
@@ -86,7 +86,7 @@ class Data(object):
         else:
             kwargs["file"] = file_path
         role_str = config.get("role") if config.get("role") != "guest" else "guest_0"
-        return Data(config=kwargs, role_str=role_str)
+        return Data(config=kwargs, role_str=role_str, for_upload=for_upload)
 
     def update(self, config: Config):
         if config.extend_sid is not None:

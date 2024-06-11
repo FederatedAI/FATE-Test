@@ -9,10 +9,10 @@ import click
 
 from fate_test._client import Clients
 from fate_test._config import Config
-from fate_test._flow_client import DataProgress, UploadDataResponse, QueryJobResponse
+from fate_test._flow_client import DataProgress, UploadDataResponse, QueryJobResponse, Status
 from fate_test._io import echo, LOGGER, set_logger
 from fate_test._parser import (Testsuite, BenchmarkSuite, PerformanceSuite, FinalStatus,
-                               DATA_LOAD_HOOK, CONF_LOAD_HOOK, DSL_LOAD_HOOK)
+                               DATA_LOAD_HOOK, CONF_LOAD_HOOK, DSL_LOAD_HOOK, Data)
 
 
 def _big_data_task(includes, guest_data_size, host_data_size, guest_feature_num, host_feature_num, host_data_type,
@@ -87,8 +87,18 @@ def _load_testsuites(includes, excludes, glob, provider=None, suffix="testsuite.
             elif suite_type == "performance":
                 suite = PerformanceSuite.load(suite_path.resolve())
             elif suite_type == "llmsuite":
+                from ruamel import yaml
                 from fate_llm.evaluate.utils import LlmSuite
                 suite = LlmSuite.load(suite_path.resolve())
+                # add data, if any provided
+                with suite_path.resolve().open("r") as f:
+                    suite_config = yaml.safe_load(f)
+                dataset = []
+                for d in suite_config.get("data"):
+                    d = DATA_LOAD_HOOK.hook(d)
+                    dataset.append(Data.load(d, suite_path, for_upload=False))
+                suite.dataset = dataset
+                # add job status
                 suite_status = {}
                 for pair in suite.pairs:
                     for job in pair.jobs:
@@ -102,6 +112,44 @@ def _load_testsuites(includes, excludes, glob, provider=None, suffix="testsuite.
         else:
             suites.append(suite)
     return suites
+
+
+@LOGGER.catch
+def _bind_data(clients: Clients, suite, config: Config):
+    with click.progressbar(length=len(suite.dataset),
+                           label="dataset",
+                           show_eta=False,
+                           show_pos=True,
+                           width=24) as bar:
+        for i, data in enumerate(suite.dataset):
+            data.update(config)
+            data_progress = DataProgress(f"{data.role_str}<-{data.namespace}.{data.table_name}")
+
+            def update_bar(n_step):
+                bar.item_show_func = lambda x: data_progress.show()
+                time.sleep(0.1)
+                bar.update(n_step)
+
+            def _call_back(resp):
+                if isinstance(resp, Status):
+                    echo.file(f"[table] bind: {resp}")
+                update_bar(0)
+
+            try:
+                echo.stdout_newline()
+                status = clients[data.role_str].bind_table(data,_call_back)
+                time.sleep(1)
+                if status != 'success':
+                    raise RuntimeError(f"binding {i + 1}th data for {suite.path} {status}")
+                bar.update(1)
+
+            except Exception:
+                exception_id = str(uuid.uuid1())
+                echo.file(f"exception({exception_id})")
+                LOGGER.exception(f"exception id: {exception_id}")
+                echo.echo(f"bind {i + 1}th data {data.config} to {data.role_str} fail, exception_id: {exception_id}")
+                # raise RuntimeError(f"exception uploading {i + 1}th data") from e
+
 
 
 @LOGGER.catch

@@ -27,7 +27,7 @@ from fate_test._config import Config
 from fate_test._io import LOGGER, echo
 from fate_test._parser import record_non_success_jobs, non_success_summary
 from fate_test.scripts._options import SharedOptions
-from fate_test.scripts._utils import _load_testsuites, _load_module_from_script
+from fate_test.scripts._utils import _load_testsuites, _load_module_from_script, _bind_data
 from fate_test.utils import extract_job_status
 
 
@@ -50,9 +50,14 @@ from fate_test.utils import extract_job_status
               help='Path to FATE Llm evaluation config. If none, use default config.')
 @click.option('--skip-evaluate', is_flag=True, default=False,
               help="skip evaluation after training model")
+@click.option("--skip-data", is_flag=True, default=False,
+              help="skip binding table specified in llmsuite")
+@click.option("--data-only", is_flag=True, default=False,
+              help="bind data only")
 @SharedOptions.get_shared_options(hidden=True)
 @click.pass_context
-def run_llmsuite(ctx, include, exclude, algorithm_suite, glob, provider, task_cores, timeout, eval_config, skip_evaluate, **kwargs):
+def run_llmsuite(ctx, include, exclude, algorithm_suite, glob, provider, task_cores, timeout, eval_config, skip_evaluate,
+                 skip_data, data_only, **kwargs):
     """
     process llmsuite
     """
@@ -108,6 +113,13 @@ def run_llmsuite(ctx, include, exclude, algorithm_suite, glob, provider, task_co
             start = time.time()
             echo.echo(f"[{i + 1}/{len(suites)}]start at {time.strftime('%Y-%m-%d %X')} {suite.path}", fg='red')
             os.environ['enable_pipeline_job_info_callback'] = '1'
+            if not skip_data:
+                try:
+                    _bind_data(client, suite, config_inst)
+                except Exception as e:
+                    raise RuntimeError(f"exception occur while uploading data for {suite.path}") from e
+            if data_only:
+                continue
             try:
                 # eval_config_dict = {}
                 if not eval_config:
