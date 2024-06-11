@@ -9,7 +9,7 @@ A collection of useful tools to running FATE tests and PipeLine tasks.
     ```bash
     pip install -e python/fate_test
     ```
-2. edit default fate\_test\_config.yaml
+2. edit default fate\_test\_config.yaml; edit path to fate base/data base accordingly
 
    ```bash
    # edit priority config file with system default editor
