@@ -168,8 +168,9 @@ def _run_llmsuite_pairs(config: Config, suite, namespace: str,
 
             def _raise(err_msg, status="failed", job_id=None, event=None, time_elapsed=None):
                 exception_id = str(uuid.uuid1())
-                suite.update_status(pair_name=pair.pair_name, job_name=job_name, job_id=job_id, exception_id=exception_id, status=status,
-                                   event=event, time_elapsed=time_elapsed)
+                if status is not None:
+                    suite.update_status(pair_name=pair.pair_name, job_name=job_name, job_id=job_id, exception_id=exception_id, status=status,
+                                        event=event, time_elapsed=time_elapsed)
                 echo.file(f"exception({exception_id}), error message:\n{err_msg}")
             # evaluate_only
             if job.evaluate_only and not skip_evaluate:
@@ -177,50 +178,53 @@ def _run_llmsuite_pairs(config: Config, suite, namespace: str,
                 job_results[job.job_name] = run_job_eval(job, eval_conf)
             # run pipeline job then evaluate
             else:
-                job_name, script_path, conf_path = job.job_name, job.script_path, job.conf_path
-                param = Config.load_from_file(conf_path)
-                mod = _load_module_from_script(script_path)
-                input_params = signature(mod.main).parameters
-
                 try:
-                    # pipeline should return pretrained model path
-                    pretrained_model_path = _run_mod(mod, input_params, config, param,
-                                                     namespace, data_namespace_mangling)
-                    job.pretrained_model_path = pretrained_model_path
-                    job_info = os.environ.get("pipeline_job_info")
-                    job_id, status, time_elapsed, event = extract_job_status(job_info, client, guest_party_id)
-                    suite.update_status(pair_name=pair.pair_name, job_name=job_name,
-                                        job_id=job_id, status=status,
-                                        time_elapsed=time_elapsed,
-                                        event=event)
+                    job_name, script_path, conf_path = job.job_name, job.script_path, job.conf_path
+                    param = Config.load_from_file(conf_path)
+                    mod = _load_module_from_script(script_path)
+                    input_params = signature(mod.main).parameters
 
-                except Exception as e:
-                    job_info = os.environ.get("pipeline_job_info")
-                    if job_info is None:
-                        job_id, status, time_elapsed, event = None, 'failed', None, None
-                    else:
+                    try:
+                        # pipeline should return pretrained model path
+                        pretrained_model_path = _run_mod(mod, input_params, config, param,
+                                                         namespace, data_namespace_mangling)
+                        job.pretrained_model_path = pretrained_model_path
+                        job_info = os.environ.get("pipeline_job_info")
                         job_id, status, time_elapsed, event = extract_job_status(job_info, client, guest_party_id)
-                    _raise(e, job_id=job_id, status=status, event=event, time_elapsed=time_elapsed)
-                    os.environ.pop("pipeline_job_info")
+                        suite.update_status(pair_name=pair.pair_name, job_name=job_name,
+                                            job_id=job_id, status=status,
+                                            time_elapsed=time_elapsed,
+                                            event=event)
+                    except Exception as e:
+                        job_info = os.environ.get("pipeline_job_info")
+                        if job_info is None:
+                            job_id, status, time_elapsed, event = None, 'failed', None, None
+                        else:
+                            job_id, status, time_elapsed, event = extract_job_status(job_info, client, guest_party_id)
+                        _raise(e, job_id=job_id, status=status, event=event, time_elapsed=time_elapsed)
+                        os.environ.pop("pipeline_job_info")
+                        continue
+                except Exception as e:
+                    _raise(f"pipeline failed: {e}", status="not submitted")
                     continue
                 if not skip_evaluate:
-                    model_task_name = "nn_0"
-                    if job.model_task_name:
-                        model_task_name = job.model_task_name
-                    from lm_eval.utils import apply_template
-                    peft_path = apply_template(job.peft_path_format,
-                                               {"fate_base": config.fate_base,
-                                                "job_id": job_id[0],
-                                                "party_id": guest_party_id,
-                                                "model_task_name": model_task_name}
-                                               )
-                    job.peft_path = peft_path
-                    echo.echo(f"Evaluating job: {job.job_name} with tasks: {job.tasks}")
                     try:
+                        model_task_name = "nn_0"
+                        if job.model_task_name:
+                            model_task_name = job.model_task_name
+                        from lm_eval.utils import apply_template
+                        peft_path = apply_template(job.peft_path_format,
+                                                   {"fate_base": config.fate_base,
+                                                    "job_id": job_id[0],
+                                                    "party_id": guest_party_id,
+                                                    "model_task_name": model_task_name}
+                                                   )
+                        job.peft_path = peft_path
+                        echo.echo(f"Evaluating job: {job.job_name} with tasks: {job.tasks}")
                         result = run_job_eval(job, eval_conf)
                         job_results[job_name] = result
                     except Exception as e:
-                        _raise(f"evaluate failed: {e}")
+                        _raise(f"evaluate failed: {e}", status=None)
                 os.environ.pop("pipeline_job_info")
         suite_results[pair.pair_name] = job_results
 
