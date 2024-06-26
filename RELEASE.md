@@ -1,3 +1,8 @@
+## Release 2.1.1
+### Major Features and Improvments
+> Fate-Test: FATE Automated Testing Tool
+* Add new subcommand `llmsuite` for FATE-LLM training and evaluation
+
 ## Release 2.1.0
 ### Major Features and Improvements
 > Fate-Test: FATE Automated Testing Tool
