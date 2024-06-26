@@ -14,26 +14,11 @@
 #  limitations under the License.
 #
 
+import os
+
 import click
 
 from fate_test.scripts._options import SharedOptions
-from fate_test.scripts.benchmark_cli import run_benchmark
-from fate_test.scripts.config_cli import config_group
-from fate_test.scripts.data_cli import data_group
-# from fate_test.scripts.flow_test_cli import flow_group
-from fate_test.scripts.performance_cli import run_task
-# from fate_test.scripts.quick_test_cli import unittest_group
-# from fate_test.scripts.secure_protocol_cli import secure_protocol_group
-from fate_test.scripts.testsuite_cli import run_suite
-
-commands = {
-    "config": config_group,
-    "suite": run_suite,
-    "performance": run_task,
-    "benchmark-quality": run_benchmark,
-    "data": data_group,
-    # "unittest": unittest_group
-}
 
 commands_alias = {
     "bq": "benchmark-quality",
@@ -42,16 +27,27 @@ commands_alias = {
 
 
 class MultiCLI(click.MultiCommand):
+    def __init__(self, *args, **kwargs):
+        super(MultiCLI, self).__init__(*args, **kwargs)
+        self.plugin_folder = os.path.dirname(__file__)
 
     def list_commands(self, ctx):
-        return list(commands)
+        rv = []
+        for filename in os.listdir(self.plugin_folder):
+            if filename.endswith("_cli.py"):
+                rv.append(filename[:-7])
+        rv.sort()
+        return rv
 
     def get_command(self, ctx, name):
-        if name not in commands and name in commands_alias:
-            name = commands_alias[name]
-        if name not in commands:
-            ctx.fail("No such command '{}'.".format(name))
-        return commands[name]
+        name = commands_alias.get(name, name).replace("-", "_")
+        ns = {}
+        fn = os.path.join(self.plugin_folder, name + "_cli.py")
+        with open(fn) as f:
+            code = compile(f.read(), fn, 'exec')
+            eval(code, ns, ns)
+        command_name = f"{name}_group" if name in ["data", "config"] else f"run_{name}"
+        return ns[command_name]
 
 
 @click.command(cls=MultiCLI, help="A collection of useful tools to running FATE's test.",

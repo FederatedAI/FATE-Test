@@ -32,6 +32,9 @@ ALL = "all"
 RELATIVE = "relative"
 ABSOLUTE = "absolute"
 
+DEFAULT_INCLUDE_FATE_LLM = None
+INCLUDE_FATE_LLM = os.getenv("INCLUDE_FATE_LLM") or DEFAULT_INCLUDE_FATE_LLM
+
 
 class TxtStyle:
     TRUE_VAL = Fore.GREEN

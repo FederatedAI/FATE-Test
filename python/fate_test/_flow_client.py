@@ -41,6 +41,29 @@ class FLOWClient(object):
     def set_address(self, address):
         self.address = address
 
+    def bind_table(self, data: Data, callback=None):
+        conf = data.config
+        conf['file'] = os.path.join(str(self._data_base_dir), conf.get('file'))
+        path = Path(conf.get('file'))
+        if not path.exists():
+            raise Exception('The file is obtained from the fate flow client machine, but it does not exist, '
+                            f'please check the path: {path}')
+        response = self._client.table.bind_path(path=str(path),
+                                                namespace=data.namespace,
+                                                name=data.table_name)
+        try:
+            if callback is not None:
+                callback(response)
+                status = str(response['message']).lower()
+            else:
+                status = response["message"]
+            code = response["code"]
+            if code != 0:
+                raise RuntimeError(f"Return code {code} != 0, bind path failed")
+        except BaseException:
+            raise ValueError(f"Bind path failed, response={response}")
+        return status
+
     def transform_local_file_to_dataframe(self, data: Data, callback=None, output_path=None):
         #data_warehouse = self.upload_data(data, callback, output_path)
         #status = self.transform_to_dataframe(data.namespace, data.table_name, data_warehouse, callback)
@@ -82,44 +105,6 @@ class FLOWClient(object):
         self._awaiting(job_id, "local", 0)
         return status
 
-    """def upload_data(self, data: Data, callback=None, output_path=None):
-        response, file_path = self._upload_data(data, output_path=output_path)
-        try:
-            if callback is not None:
-                callback(response)
-            code = response["code"]
-            if code != 0:
-                raise ValueError(f"Return code {code}!=0")
-
-            namespace = response["data"]["namespace"]
-            name = response["data"]["name"]
-            job_id = response["job_id"]
-        except BaseException:
-            raise ValueError(f"Upload data fails, response={response}")
-        # self.monitor_status(job_id, role=self.role, party_id=self.party_id)
-        self._awaiting(job_id, "local", 0)
-
-        return dict(namespace=namespace, name=name)
-
-    def transform_to_dataframe(self, namespace, table_name, data_warehouse, callback=None):
-        response = self._client.data.dataframe_transformer(namespace=namespace,
-                                                           name=table_name,
-                                                           data_warehouse=data_warehouse)
-
-        try:
-            if callback is not None:
-                callback(response)
-                status = self._awaiting(response["job_id"], "local", 0)
-                status = str(status).lower()
-            else:
-                status = response["retmsg"]
-
-        except Exception as e:
-            raise RuntimeError(f"upload data failed") from e
-        job_id = response["job_id"]
-        self._awaiting(job_id, "local", 0)
-        return status"""
-
     def delete_data(self, data: Data):
         try:
             table_name = data.config['table_name'] if data.config.get(
@@ -153,27 +138,6 @@ class FLOWClient(object):
             if callback is not None:
                 callback(response)
             time.sleep(1)
-
-    """def _upload_data(self, data, output_path=None, verbose=0, destroy=1):
-        conf = data.config
-        # if conf.get("engine", {}) != "PATH":
-        if output_path is not None:
-            conf['file'] = os.path.join(os.path.abspath(output_path), os.path.basename(conf.get('file')))
-        else:
-            if _config.data_switch is not None:
-                conf['file'] = os.path.join(str(self._cache_directory), os.path.basename(conf.get('file')))
-            else:
-                conf['file'] = os.path.join(str(self._data_base_dir), conf.get('file'))
-        path = Path(conf.get('file'))
-        if not path.exists():
-            raise Exception('The file is obtained from the fate flow client machine, but it does not exist, '
-                            f'please check the path: {path}')
-        response = self._client.data.upload(file=str(path),
-                                            head=data.head,
-                                            meta=data.meta,
-                                            extend_sid=data.extend_sid,
-                                            partitions=data.partitions)
-        return response, conf["file"]"""
 
     def _output_data_table(self, job_id, role, party_id, task_name):
         response = self._client.output.data_table(job_id, role=role, party_id=party_id, task_name=task_name)
@@ -223,7 +187,7 @@ class FLOWClient(object):
     """def _add_notes(self, job_id, role, party_id, notes):
         data = dict(job_id=job_id, role=role, party_id=party_id, notes=notes)
         response = AddNotesResponse(self._post(url='job/update', json=data))
-        return response"""
+        return response
 
     def _table_bind(self, data):
         response = self._post(url='table/bind', json=data)
@@ -235,6 +199,7 @@ class FLOWClient(object):
         except Exception as e:
             raise RuntimeError(f"table bind error: {response}") from e
         return response
+    """
 
 
 class Status(object):
