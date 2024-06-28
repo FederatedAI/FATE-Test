@@ -33,6 +33,10 @@ class echo(object):
         click.secho(message, file=cls._file, **kwargs)
 
     @classmethod
+    def sep_line(cls):
+        click.secho("-------------------------------------------------")
+
+    @classmethod
     def file(cls, message, **kwargs):
         click.secho(message, file=cls._file, **kwargs)
 

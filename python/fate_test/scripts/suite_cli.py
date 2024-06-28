@@ -30,15 +30,6 @@ from fate_test.scripts._options import SharedOptions
 from fate_test.scripts._utils import _load_testsuites, _upload_data, _delete_data, _load_module_from_script
 from fate_test.utils import extract_job_status
 
-"""
-@click.option('-uj', '--update-job-parameters', default="{}", type=JSON_STRING,
-              help="a json string represents mapping for replacing fields in conf.job_parameters")
-@click.option('-uc', '--update-component-parameters', default="{}", type=JSON_STRING,
-              help="a json string represents mapping for replacing fields in conf.component_parameters")
-@click.option('-m', '--timeout', type=int, default=3600, help="maximun running time of job")
-@click.option('-p', '--task-cores', type=int, help="processors per node")
-"""
-
 
 @click.command("suite")
 @click.option('-i', '--include', required=True, type=click.Path(exists=True), multiple=True, metavar="<include>",
@@ -79,8 +70,6 @@ def run_suite(ctx, include, exclude, glob,
     if timeout is not None:
         config_inst.update_conf(timeout=timeout)
 
-    """if ctx.obj["auto_increasing_sid"] is not None:
-        config_inst.auto_increasing_sid = ctx.obj["auto_increasing_sid"]"""
     if clean_data is None:
         clean_data = config_inst.clean_data
     namespace = ctx.obj["namespace"]
