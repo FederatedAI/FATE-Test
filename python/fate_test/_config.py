@@ -36,20 +36,20 @@ performance_template_directory: examples/benchmark_performance/
 # st_config_directory: examples/flow_test_template/hetero_lr/flow_test_config.yaml
 
 # directory stores testsuite file with min_test data sets to upload,
-# default location={FATE}/examples/data/upload_config/min_test_data_testsuite.json
-min_test_data_config: examples/data/upload_config/min_test_data_testsuite.json
+# default location={FATE}/examples/data/upload_config/min_test_data_testsuite.yaml
+min_test_data_config: examples/data/upload_config/min_test_data_testsuite.yaml
 # directory stores testsuite file with all example data sets to upload,
-# default location={FATE}/examples/data/upload_config/all_examples_data_testsuite.json
-all_examples_data_config: examples/data/upload_config/all_examples_data_testsuite.json
+# default location={FATE}/examples/data/upload_config/all_examples_data_testsuite.yaml
+all_examples_data_config: examples/data/upload_config/all_examples_data_testsuite.yaml
 
 # directory where FATE code locates, default installation location={FATE}/fate
 # python/ml -> $fate_base/python/ml
-fate_base: path(FATE)/fate
+fate_base: path(FATE)/
 
 # whether to delete data in suites after all jobs done
 clean_data: true
 
-# participating parties' id and correponding flow service ip & port information
+# participating parties' id and corresponding flow service ip & port information
 parties:
   guest: ['9999']
   host: ['10000', '9999']

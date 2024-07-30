@@ -45,8 +45,8 @@ DATA_DISPLAY_PATTERN = re.compile("^FATE")
 @click.option("--enable-clean-data", "clean_data", flag_value=True, default=None)
 @SharedOptions.get_shared_options(hidden=True)
 @click.pass_context
-def run_benchmark(ctx, include, exclude, glob, skip_data, tol, clean_data, storage_tag, history_tag, match_details,
-                  task_cores, timeout, **kwargs):
+def run_benchmark_quality(ctx, include, exclude, glob, skip_data, tol, clean_data, storage_tag, history_tag, match_details,
+                          task_cores, timeout, **kwargs):
     """
     process benchmark suite, alias: bq
     """
