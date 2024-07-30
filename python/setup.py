@@ -8,7 +8,7 @@ package_data = {"": ["*"]}
 install_requires = [
     "click>=8.0.0",
     "loguru>=0.6.0",
-    "pandas>=2.0.3",
+    "pandas",
     "prettytable>=1.0.0,<2.0.0",
     "ruamel.yaml>=0.16,<0.17.0",
     'colorama>0.4.4',
