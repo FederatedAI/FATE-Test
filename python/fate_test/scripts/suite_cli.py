@@ -81,6 +81,7 @@ def run_suite(ctx, include, exclude, glob,
     echo.echo(f"testsuite namespace: {namespace}", fg='red')
     echo.echo("loading testsuites:")
     suites = _load_testsuites(includes=include, excludes=exclude, glob=glob, provider=provider)
+    echo.echo(f"suites: {suites}", fg='blue')
     for suite in suites:
         _config.jobs_num += len(suite.pipeline_jobs)
         echo.echo(f"\tdataset({len(suite.dataset)}) "
@@ -91,7 +92,7 @@ def run_suite(ctx, include, exclude, glob,
     echo.stdout_newline()
     # with Clients(config_inst) as client:
     client = Clients(config_inst)
-
+    echo.echo(f"client: {client}", fg='blue')
     for i, suite in enumerate(suites):
         # noinspection PyBroadException
         try:
@@ -109,6 +110,7 @@ def run_suite(ctx, include, exclude, glob,
                 os.environ['enable_pipeline_job_info_callback'] = '1'
                 try:
                     time_consuming = _run_pipeline_jobs(config_inst, suite, namespace, data_namespace_mangling, client)
+                    #echo.echo(f"time_consuming: {time_consuming}", fg='blue')
                 except Exception as e:
                     raise RuntimeError(f"exception occur while running pipeline jobs for {suite.path}") from e
 
@@ -116,7 +118,9 @@ def run_suite(ctx, include, exclude, glob,
                 _delete_data(client, suite)
             echo.echo(f"[{i + 1}/{len(suites)}]elapse {timedelta(seconds=int(time.time() - start))}", fg='red')
             if not skip_jobs:
+                echo.echo(f"time_consuming = {time_consuming}")
                 suite_file = str(suite.path).split("/")[-1]
+                echo.echo(f"suite_file = {suite_file}")
                 echo.echo(suite.pretty_final_summary(time_consuming, suite_file))
 
         except Exception:
