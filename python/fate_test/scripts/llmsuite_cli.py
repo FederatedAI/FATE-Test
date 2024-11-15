@@ -183,7 +183,6 @@ def _run_llmsuite_pairs(config: Config, suite, namespace: str,
                     param = Config.load_from_file(conf_path)
                     mod = _load_module_from_script(script_path)
                     input_params = signature(mod.main).parameters
-
                     try:
                         # pipeline should return pretrained model path
                         pretrained_model_path = _run_mod(mod, input_params, config, param,
@@ -213,14 +212,22 @@ def _run_llmsuite_pairs(config: Config, suite, namespace: str,
                         if job.model_task_name:
                             model_task_name = job.model_task_name
                         from lm_eval.utils import apply_template
-                        peft_path = apply_template(job.peft_path_format,
-                                                   {"fate_base": config.fate_base,
-                                                    "job_id": job_id[0],
-                                                    "party_id": guest_party_id,
-                                                    "model_task_name": model_task_name}
-                                                   )
-                        job.peft_path = peft_path
-                        echo.echo(f"Evaluating job: {job.job_name} with tasks: {job.tasks}")
+                        if job.peft_path_format:
+                            peft_path = apply_template(job.peft_path_format,
+                                                        {"fate_base": config.fate_base,
+                                                        "job_id": job_id[0],
+                                                        "party_id": guest_party_id,
+                                                        "model_task_name": model_task_name}
+                                                        )
+                            job.peft_path=peft_path
+                        else:
+                            model_weights_format = apply_template(job.model_weights_format,
+                                                        {"fate_base": config.fate_base,
+                                                        "job_id": job_id[0],
+                                                        "party_id": guest_party_id,
+                                                        "model_task_name": model_task_name}
+                                                        )
+                            job.model_weights_format = model_weights_format
                         result = run_job_eval(job, eval_conf)
                         job_results[job_name] = result
                     except Exception as e:
