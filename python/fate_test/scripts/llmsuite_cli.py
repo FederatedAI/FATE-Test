@@ -15,6 +15,7 @@
 #
 
 import os
+import tarfile
 import time
 import uuid
 from datetime import timedelta
@@ -29,6 +30,7 @@ from fate_test._parser import record_non_success_jobs, non_success_summary
 from fate_test.scripts._options import SharedOptions
 from fate_test.scripts._utils import _load_testsuites, _load_module_from_script, _bind_data
 from fate_test.utils import extract_job_status
+
 
 
 @click.command("llmsuite")
@@ -141,6 +143,8 @@ def run_llmsuite(ctx, include, exclude, algorithm_suite, glob, provider, task_co
             echo.stdout_newline()
         suite_file = str(suite.path).split("/")[-1]
         record_non_success_jobs(suite, suite_file)
+        #Addpretty_final_summary
+        #echo.echo(suite.pretty_final_summary(time_consuming, suite_file))
     non_success_summary()
     echo.farewell()
     echo.echo(f"llmsuite namespace: {namespace}", fg='red')
@@ -212,6 +216,27 @@ def _run_llmsuite_pairs(config: Config, suite, namespace: str,
                         if job.model_task_name:
                             model_task_name = job.model_task_name
                         from lm_eval.utils import apply_template
+                        if job.requires_untar:
+                            requires_untar = apply_template(job.requires_untar, 
+                                                            {"fate_base": config.fate_base,
+                                                             "job_id": job_id[0],
+                                                             "party_id": guest_party_id,
+                                                             "model_task_name": model_task_name}
+                                                        )
+                            job.requires_untar = requires_untar  
+                            
+                            current_dir = job.requires_untar  
+                            tar_file_name = "output_model"  
+                            tar_file_path = os.path.join(current_dir, tar_file_name)
+                            
+                            output_dir = os.path.join(current_dir, "output_models")  
+                            os.makedirs(output_dir, exist_ok=True)  
+                            
+                            try:
+                                with tarfile.open(tar_file_path, "r") as tar_ref:  
+                                    tar_ref.extractall(output_dir)  
+                            except Exception as e:
+                                print(f"解压失败: {e}")
                         if job.peft_path_format:
                             peft_path = apply_template(job.peft_path_format,
                                                         {"fate_base": config.fate_base,
@@ -220,7 +245,7 @@ def _run_llmsuite_pairs(config: Config, suite, namespace: str,
                                                         "model_task_name": model_task_name}
                                                         )
                             job.peft_path=peft_path
-                        else:
+                        if job.model_weights_format:
                             model_weights_format = apply_template(job.model_weights_format,
                                                         {"fate_base": config.fate_base,
                                                         "job_id": job_id[0],
