@@ -98,6 +98,8 @@ def _load_testsuites(includes, excludes, glob, provider=None, suffix="testsuite.
                     d = DATA_LOAD_HOOK.hook(d)
                     dataset.append(Data.load(d, suite_path, for_upload=False))
                 suite.dataset = dataset
+                # add loader_conf
+                suite.loader_conf = suite_config.get("loader_conf", "") 
                 # add job status
                 suite_status = {}
                 for pair in suite.pairs:
